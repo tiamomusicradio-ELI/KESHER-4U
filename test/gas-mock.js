@@ -31,7 +31,7 @@ function makeContext() {
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, inTimezone() { return this; }, create() {} }) },
     Logger: { log: m => console.log('[Logger]', m) },
-    Utilities: { formatDate: (d) => d.toISOString().slice(0, 16).replace('T', ' ') },
+    Utilities: { formatDate: (d) => d.toISOString().slice(0, 16).replace('T', ' '), parseDate: (s) => new Date(s.replace(' ', 'T') + ':00+02:00') },
     Session: { getActiveUser: () => ({ getEmail: () => '' }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ body: s, setMimeType() { return this; } }) },
   };

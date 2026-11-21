@@ -22,7 +22,8 @@ var AUDIT_COLS = ['מועד', 'פעולה', 'סוג', 'מס׳ קריאה', 'מז
 var TECH = ['id', 'updated', 'deleted', 'json'];          // עמודות טכניות — מוסתרות, לא לערוך ידנית
 var ST = ['חדשה', 'בטיפול', 'ממתינה למדווח', 'סגורה'];
 var PR = ['נמוכה', 'רגילה', 'גבוהה', 'דחופה'];
-var CH = ['טלפון', 'מכשיר קשר', 'מייל', 'וואטסאפ', 'פנייה אישית'];
+var CH = ['טלפון', 'מכשיר קשר', 'מייל', 'וואטסאפ', 'פנייה אישית', 'דיווח עצמי באתר'];
+var REPORT_LIMIT = 40;            // מקסימום דיווחים מהדף הציבורי ב־10 דקות (הגנה מהצפה)
 var TZ = 'Asia/Jerusalem';
 var BACKUP_FOLDER = 'Kesher-4U גיבויים';
 var BACKUP_KEEP_DAYS = 90;
@@ -47,7 +48,7 @@ function doPost(e) {
   var out;
   try {
     var req = JSON.parse(e.postData.contents);
-    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel };
+    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel, apiReport: apiReport };
     if (!fns.hasOwnProperty(req.fn)) throw new Error('unknown function');
     out = { ok: true, result: fns[req.fn].apply(null, Array.isArray(req.args) ? req.args : []) };
   } catch (err) {
@@ -226,26 +227,98 @@ function apiPut(token, col, id, data, actor) {
   if (!authOk_(token)) return denied_();
   check_(col, id);
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('נתונים לא תקינים');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try { put_(col, id, data, actor_(actor)); SpreadsheetApp.flush(); bump_(); }
+  finally { lock.releaseLock(); }
+  return { ok: true };
+}
+
+// כתיבה לגיליון + יומן שינויים. נקרא רק כשהנעילה מוחזקת.
+function put_(col, id, data, actor) {
   delete data.id;
   var json = JSON.stringify(data);
   if (json.length > 49000) throw new Error('הרשומה ארוכה מדי');
+  var sh = sheet_(col), row = findRow_(sh, col, id), t = Date.now();
+  var values = readable_(col, data).concat([txt_(id), t, false, txt_(json)]);
+  if (row) {
+    var wasDeleted = sh.getRange(row, COLS[col].length + 3).getValue() === true;
+    sh.getRange(row, 1, 1, values.length).setValues([values]).setFontLine('none').setFontColor(null);
+    audit_(wasDeleted ? 'create' : 'update', col, id, actor, data);
+  } else {
+    sh.appendRow(values);
+    audit_('create', col, id, actor, data);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Public reporting page: create-only, no password, strict validation  */
+/* ------------------------------------------------------------------ */
+function apiReport(token, r) {
+  if (!PropertiesService.getScriptProperties().getProperty('APP_PASSWORD')) throw new Error('המערכת עוד לא הוגדרה');
+  if (!r || typeof r !== 'object') throw new Error('נתונים לא תקינים');
+  var str = function (v, max) { return String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max); };
+  var T = null;
+  for (var i = 0; i < TOP.length; i++) if (TOP[i].k === r.topic) T = TOP[i];
+  if (!T) throw new Error('נושא לא תקין');
+  var sub = str(r.sub, 120);
+  if (T.s.indexOf(sub) < 0) throw new Error('תת־נושא לא תקין');
+  var site = str(r.site, 40), bldg = str(r.bldg, 80);
+  if (site && !SITES.hasOwnProperty(site)) throw new Error('מתחם לא תקין');
+  if (bldg && (!site || SITES[site].indexOf(bldg) < 0)) throw new Error('מבנה לא תקין');
+  var ev = !!T.ev, out = ev && sub === OUT;
+  if (!ev && (!site || !bldg)) throw new Error('חסר מיקום');
+  if (out && !site) throw new Error('חסר מתחם');
+  var eventAt = 0, slot = '';
+  if (ev) {
+    slot = str(r.slot, 10);
+    if (!SLOT.hasOwnProperty(slot) || !/^\d{4}-\d{2}-\d{2}$/.test(String(r.evDate))) throw new Error('חסר מועד האירוע');
+    var p = String(r.evDate).split('-');
+    eventAt = Utilities.parseDate(p[0] + '-' + p[1] + '-' + p[2] + ' ' + ('0' + SLOT[slot]).slice(-2) + ':00', TZ, 'yyyy-MM-dd HH:mm').getTime();
+    if (eventAt < Date.now() - 864e5) throw new Error('תאריך האירוע עבר');
+  }
+  var name = str(r.rName, 80), phone = str(r.rPhone, 30), unit = str(r.rUnit, 80);
+  if (!name || phone.replace(/\D/g, '').length < 9) throw new Error('חסרים פרטי מדווח');
+  var pri = Number(r.priority); if (!(pri >= 0 && pri <= 3)) pri = 1; pri = Math.floor(pri);
+
+  // הגנה מהצפה: מונה גלובלי לחלון של 10 דקות
+  var cache = CacheService.getScriptCache(), win = 'rl' + Math.floor(Date.now() / 6e5);
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var sh = sheet_(col), row = findRow_(sh, col, id), t = Date.now();
-    var values = readable_(col, data).concat([txt_(id), t, false, txt_(json)]);
-    if (row) {
-      var wasDeleted = sh.getRange(row, COLS[col].length + 3).getValue() === true;
-      sh.getRange(row, 1, 1, values.length).setValues([values]).setFontLine('none').setFontColor(null);
-      audit_(wasDeleted ? 'create' : 'update', col, id, actor_(actor), data);
-    } else {
-      sh.appendRow(values);
-      audit_('create', col, id, actor_(actor), data);
+    var cnt = Number(cache.get(win) || 0);
+    if (cnt >= REPORT_LIMIT) throw new Error('עומס — נסו שוב בעוד כמה דקות');
+    cache.put(win, String(cnt + 1), 900);
+
+    // מדווח: לפי טלפון, אחרת חדש
+    var csh = sheet_('customers'), cid = '', dig = phone.replace(/\D/g, '');
+    var last = csh.getLastRow();
+    if (last >= 2) {
+      var rows = csh.getRange(2, COLS.customers.length + 1, last - 1, TECH.length).getValues();
+      for (var j = 0; j < rows.length && !cid; j++) {
+        if (rows[j][2] === true) continue;
+        try { var cd = JSON.parse(rows[j][3]); if (String(cd.phone || '').replace(/\D/g, '') === dig) cid = String(rows[j][0]); } catch (e) {}
+      }
     }
+    var now = Date.now();
+    if (!cid) { cid = 'c' + now.toString(36) + Math.random().toString(36).slice(2, 6); put_('customers', cid, { name: name, phone: phone, company: unit, email: '', notes: '', created: now }, name); }
+
+    // מספר קריאה רץ
+    var tsh = sheet_('tickets'), tl = tsh.getLastRow(), num = 1000;
+    if (tl >= 2) tsh.getRange(2, 1, tl - 1, 1).getValues().forEach(function (x) { var n = Number(x[0]); if (n > num) num = n; });
+    num += 1;
+    var id = 't' + now.toString(36) + Math.random().toString(36).slice(2, 6);
+    put_('tickets', id, {
+      num: num, topic: T.k, sub: sub, title: str(r.title, 120) || (ev ? T.n + ' · ' + sub : sub),
+      site: site, bldg: ev && !out ? '' : bldg, location: str(r.location, 200), eventAt: eventAt, slot: slot,
+      custId: cid, custName: name, channel: 5, priority: pri, status: 0, assignee: '', desc: str(r.desc, 3000),
+      created: now, updated: now, due: ev ? eventAt : now + [168, 72, 24, 4][pri] * 36e5, closed: 0,
+      log: [{ at: now, by: name, sys: 1, text: 'הקריאה נפתחה בדף הדיווח' }],
+    }, name + ' (דף הדיווח)');
     SpreadsheetApp.flush();
     bump_();
   } finally { lock.releaseLock(); }
-  return { ok: true };
+  return { ok: true, num: num };
 }
 
 function apiDel(token, col, id, actor) {

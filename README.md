@@ -16,9 +16,19 @@
  GitHub ── הקוד והתיעוד. כל שינוי כאן מתעדכן ב־Render אוטומטית
 ```
 
+## שני דפים
+
+| כתובת | למי | מה יש בה |
+|---|---|---|
+| `kesher-4u.onrender.com` | **כל מי שמדווח** | דף נחיתה: כפתורי הנושאים וטופס דיווח. אין בו סיסמה, ואין גישה לקריאות. אחרי השליחה המדווח מקבל את מספר הקריאה |
+| `kesher-4u.onrender.com/tech/` | **הצוות** | ממשק מלא: לוח קריאות, טיפול וסגירה, פילוח וייצוא. נכנסים עם סיסמה |
+
+השרת מאפשר לדף הציבורי **רק לפתוח קריאה חדשה**. הוא בודק שהנושא, תת־הנושא, המתחם והמבנה תקינים, ומגביל את מספר הדיווחים ל־40 בכל 10 דקות, כדי למנוע הצפה. קריאה שנפתחה בדף הציבורי מסומנת "דיווח עצמי באתר".
+
 | תיקייה | מה יש בה |
 |---|---|
-| `web/` | האתר ש־Render מגיש. ב־`web/settings.js` נמצאת הכתובת של השרת |
+| `src/app.html` | **מקור הממשק** — ממנו נבנים שלושת הדפים (`npm run build`) |
+| `web/` | מה ש־Render מגיש: `index.html` (ציבורי), `tech/index.html` (צוות). ב־`web/settings.js` נמצאת הכתובת של השרת |
 | `apps-script/` | הקוד שמודבקים ב־Google Apps Script. **`Config.gs` = רשימות הנושאים והמבנים** |
 | `docs/` | תיעוד: [רשימות](docs/lists.md) · [מבנה הנתונים](docs/data.md) |
 
@@ -108,5 +118,5 @@
 ## למפתחים
 - `npm test`: בדיקת תחביר ורשימות, ובדיקות יחידה לשרת מול גיליון מדומה.
 - `npm run dev`: האתר במחשב, מול שרת מדומה, בכתובת http://localhost:3400. הסיסמה היא `pw`.
-- אחרי שינוי ב־`web/index.html` מריצים `npm run build`. הפקודה מעדכנת את `apps-script/Index.html` ואת `docs/lists.md`.
-- API (POST ל־`/exec` עם גוף `{"fn": "...", "args": [...]}`): `apiConfig()`, `apiSync(password, since)`, `apiPut(password, col, id, data, agent)`, `apiDel(password, col, id, agent)`.
+- עורכים רק את `src/app.html`, ואז מריצים `npm run build`. הפקודה בונה את `web/index.html`, `web/tech/index.html`, `apps-script/Index.html` ואת `docs/lists.md`.
+- API (POST ל־`/exec` עם גוף `{"fn": "...", "args": [...]}`): `apiConfig()`, `apiSync(password, since)`, `apiPut(password, col, id, data, agent)`, `apiDel(password, col, id, agent)`, ‏`apiReport(_, report)` (ציבורי, יצירה בלבד).

@@ -9,7 +9,8 @@ http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(out.body);
     }); return;
   }
-  const f = path.join(__dirname, '..', 'web', req.url === '/' ? 'index.html' : req.url.split('?')[0]);
+  let u = req.url.split('?')[0]; if (u.endsWith('/')) u += 'index.html';
+  const f = path.join(__dirname, '..', 'web', u);
   if (req.url.startsWith('/settings.js')) { res.end("var API_URL='/rpc';var CFG=null,TOP,SITES,SLOT,OUT;"); return; }
   fs.readFile(f, (e, d) => { if (e) { res.writeHead(404); res.end(); } else { res.writeHead(200, { 'Content-Type': f.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript' }); res.end(d); } });
 }).listen(3400, () => console.log('e2e on 3400'));

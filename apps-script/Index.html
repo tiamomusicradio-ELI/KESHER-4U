@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kesher-4U · מוקד שירות</title>
+<title>Kesher-4U · ממשק צוות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -37,6 +37,10 @@ h1{font-size:clamp(1.6rem,3.2vw,2.2rem);line-height:1.1;margin:0;font-weight:800
 .wm{font-size:clamp(1.7rem,3.4vw,2.4rem);font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
 .wm b{background:linear-gradient(90deg,#b8086a,#a3361f);-webkit-background-clip:text;background-clip:text;color:transparent}
 :root.hc .wm b{color:#000;background:none}
+html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-stats,html.pub #v-people{display:none!important}
+.done{max-width:640px;margin:30px auto;text-align:center;background:#fff;border:3px solid var(--ok);border-radius:22px;box-shadow:0 8px 0 var(--ok);padding:28px 22px}
+.done .big-num{font-size:clamp(2.6rem,7vw,3.6rem);font-weight:800;color:var(--ok);line-height:1;margin:10px 0}
+.foot{max-width:1240px;margin:0 auto;padding:10px max(4vw,16px) 40px;color:var(--mut);font-size:.9rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .tagl{font-size:clamp(1.05rem,1.8vw,1.3rem);font-weight:700;color:var(--mut)}
 .logo.glint::after{background:linear-gradient(100deg,transparent,rgba(255,209,102,.55),transparent)}
 h2{font-size:1.35rem;line-height:1.2;margin:0 0 .6rem}
@@ -247,6 +251,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
     <div class="cust" id="cust"></div>
   </section>
 </main>
+<footer class="foot" id="foot"></footer>
 <div class="veil" id="veil"></div>
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -266,7 +271,8 @@ const I={
  evl:'<rect x="5" y="2" width="14" height="20" rx="2.5"/><circle cx="12" cy="15" r="3.6"/><circle cx="12" cy="7" r="1.7"/>'};
 const TK=Object.fromEntries(TOP.map(t=>[t.k,t]));
 const ST=['חדשה','בטיפול','ממתינה למדווח','סגורה'],PR=['נמוכה','רגילה','גבוהה','דחופה'],SLA_H=[168,72,24,4];
-const CH=['טלפון','מכשיר קשר','מייל','וואטסאפ','פנייה אישית'];
+const CH=['טלפון','מכשיר קשר','מייל','וואטסאפ','פנייה אישית','דיווח עצמי באתר'];
+const PUB=window.K4U_MODE==='public';
 const S={tickets:[],customers:[]};
 let view='report',openId=null,lastFocus=null;
 const $=id=>document.getElementById(id);
@@ -365,8 +371,8 @@ function kpis(){
     .map(([v,l,h])=>`<li class="kpi${h&&v>0?' hot':''}"><b>${v}</b><span>${l}</span></li>`).join('');
 }
 function tiles(){
-  $('tiles').innerHTML=TOP.map(t=>{const o=S.tickets.filter(x=>x.topic===t.k&&x.status!==3).length;
-    return `<button class="tile glint" data-new="${t.k}" style="--tc:${t.c};--tc2:${t.c2};--d:${(TOP.indexOf(t)*.45).toFixed(2)}s" aria-label="דיווח בנושא ${t.n}. ${t.d}. ${o} קריאות פתוחות">${icon(t.k)}<b>${t.n}</b><small>${t.d}</small><span class="go">${o?o+' פתוחות · ':''}דיווח ←</span></button>`}).join('');
+  $('tiles').innerHTML=TOP.map(t=>{const o=PUB?0:S.tickets.filter(x=>x.topic===t.k&&x.status!==3).length;
+    return `<button class="tile glint" data-new="${t.k}" style="--tc:${t.c};--tc2:${t.c2};--d:${(TOP.indexOf(t)*.45).toFixed(2)}s" aria-label="דיווח בנושא ${t.n}. ${t.d}${PUB?'':'. '+o+' קריאות פתוחות'}">${icon(t.k)}<b>${t.n}</b><small>${t.d}</small><span class="go">${o?o+' פתוחות · ':''}דיווח ←</span></button>`}).join('');
 }
 const match=(t,q)=>!q||[t.title,t.num,t.custName,t.assignee,t.desc,t.location,t.site,t.bldg,t.slot,t.sub,tp(t).n].join(' ').toLowerCase().includes(q);
 const card=t=>`<button class="tk" data-t="${esc(t.id)}" style="${vars(t)}"><span class="m"><span class="num">#${esc(t.num)}</span><span class="tag p${t.priority}">${PR[t.priority]}</span>${left(t)}</span>
@@ -422,6 +428,12 @@ $('drawer').addEventListener('keydown',e=>{if(e.key!=='Tab')return;const f=[...$
   const a=f[0],z=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();z.focus()}else if(!e.shiftKey&&document.activeElement===z){e.preventDefault();a.focus()}});
 const opts=(a,v)=>a.map((x,i)=>`<option value="${i}"${i==v?' selected':''}>${x}</option>`).join('');
 const subRadios=k=>TK[k]?TK[k].s.map(s=>`<label class="opt"><input type="radio" name="sub" value="${esc(s)}">${esc(s)}</label>`).join(''):'';
+function done(num,T,sub){
+  openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">הדיווח התקבל ✓</h2><button data-x>סגירה ✕</button></div>
+  <div class="done" role="status"><p style="margin:0;font-size:1.1rem">מספר הקריאה שלך</p><div class="big-num num">#${esc(num)}</div>
+  <p style="margin:0 0 6px"><b>${esc(T.n)}</b> · ${esc(sub)}</p><p class="note" style="margin:0">הצוות קיבל את הקריאה ויחזור אליך בטלפון שמסרת. כדאי לשמור את מספר הקריאה.</p></div>
+  <div class="row" style="justify-content:center"><button class="pri big" data-x>חזרה לדף הראשי</button></div>`,1);
+}
 function newTicket(k){
   openId=null;
   const td=new Date();td.setMinutes(td.getMinutes()-td.getTimezoneOffset());const minD=td.toISOString().slice(0,10);
@@ -444,10 +456,10 @@ function newTicket(k){
     <div><span class="lbl" id="uL">דחיפות</span><div class="opts u" role="radiogroup" aria-labelledby="uL">${PR.map((p,i)=>`<label class="opt"><input type="radio" name="priority" value="${i}"${i===1?' checked':''}>${p}</label>`).join('')}</div></div>
   </fieldset>
   <fieldset id="fsRep" hidden><legend>מי מדווח?</legend>
-  <div class="grid2"><label>שם המדווח ${R}<input name="rName" list="ppl" autocomplete="name"></label><label>טלפון לחזרה ${R}<input name="rPhone" type="tel" inputmode="tel" autocomplete="tel"></label>
-  <label>יחידה / מחלקה<input name="rUnit"></label><label>התקבל דרך<select name="channel">${opts(CH,0)}</select></label></div>
-  <label>נציג מטפל<input name="assignee" value="${esc(me())}"></label>
-  <datalist id="ppl">${S.customers.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join('')}</datalist></fieldset>
+  <div class="grid2"><label>שם המדווח ${R}<input name="rName" ${PUB?'':'list="ppl"'} autocomplete="name"></label><label>טלפון לחזרה ${R}<input name="rPhone" type="tel" inputmode="tel" autocomplete="tel"></label>
+  <label>יחידה / מחלקה<input name="rUnit" autocomplete="organization"></label>${PUB?'':`<label>התקבל דרך<select name="channel">${opts(CH,0)}</select></label>`}</div>
+  ${PUB?'':`<label>נציג מטפל<input name="assignee" value="${esc(me())}"></label>
+  <datalist id="ppl">${S.customers.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join('')}</datalist>`}</fieldset>
   <p id="fErr" class="late" role="alert"></p>
   <div class="row"><button class="pri big">שליחת הדיווח</button><button type="button" class="big" data-x>ביטול</button></div></form>`,1);
   const f=$('fT');
@@ -465,7 +477,8 @@ function newTicket(k){
     if(n==='site')bldgs(e.target.value);
     if(n==='topic'||n==='sub'||n==='site')sync()});
   $('bFind').addEventListener('input',e=>{const q=e.target.value.trim();$('bldgs').querySelectorAll('.opt').forEach(o=>o.hidden=!!q&&!o.textContent.includes(q))});
-  f.rName.addEventListener('change',()=>{const c=S.customers.find(c=>c.name===f.rName.value.trim());if(c){f.rPhone.value||=c.phone||'';f.rUnit.value||=c.company||''}});
+  if(!PUB)f.rName.addEventListener('change',()=>{const c=S.customers.find(c=>c.name===f.rName.value.trim());if(c){f.rPhone.value||=c.phone||'';f.rUnit.value||=c.company||''}});
+  if(PUB){try{const m=JSON.parse(ls('rep')||'{}');if(m.n)f.rName.value=m.n;if(m.p)f.rPhone.value=m.p;if(m.u)f.rUnit.value=m.u}catch(e){}}
   if(k){$('subs').innerHTML=subRadios(k);sync()}
   f.onsubmit=async e=>{e.preventDefault();
     const k=val('topic'),T=TK[k],ev=!!T?.ev,sub=val('sub'),out=ev&&sub===OUT,loc=!$('fsLoc').hidden;
@@ -479,6 +492,16 @@ function newTicket(k){
     if(bad){$('fErr').textContent=msg;const el=f.querySelector(`[name="${bad[0]}"]`);if(el){el.setAttribute('aria-invalid','true');el.focus();el.scrollIntoView({block:'center'})}return}
     $('fErr').textContent='';
     const d=Object.fromEntries(['rName','rPhone','rUnit','channel','assignee','title','desc','location','evDate','slot','site','bldg','priority'].map(n=>[n,val(n)]));
+    if(PUB){
+      if(d.rPhone.replace(/\D/g,'').length<9){$('fErr').textContent='מספר הטלפון קצר מדי';f.rPhone.focus();return}
+      const btn=f.querySelector('button.pri');btn.disabled=true;btn.textContent='שולח…';
+      try{
+        const r=await call('apiReport',{topic:k,sub,title:d.title,desc:d.desc,priority:+d.priority,site:loc?d.site:'',bldg:loc?d.bldg:'',location:loc?d.location:'',evDate:ev?d.evDate:'',slot:ev?d.slot:'',rName:d.rName,rPhone:d.rPhone,rUnit:d.rUnit});
+        ls('rep',JSON.stringify({n:d.rName,p:d.rPhone,u:d.rUnit}));
+        done(r.num,T,sub);
+      }catch(e){btn.disabled=false;btn.textContent='שליחת הדיווח';$('fErr').textContent=String(e&&e.message||'').includes('עומס')?'יש עומס כרגע — נסו שוב בעוד כמה דקות':'השליחה נכשלה — בדקו את החיבור ונסו שוב'}
+      return;
+    }
     const dig=s=>s.replace(/\D/g,'');let c=S.customers.find(c=>dig(c.phone||'')===dig(d.rPhone)&&dig(d.rPhone))||S.customers.find(c=>c.name===d.rName);
     const cid=c?.id||uid();
     if(!c||c.name!==d.rName||(d.rUnit&&c.company!==d.rUnit))if(!await save('customers',cid,{...(c||{created:now(),email:'',notes:''}),name:d.rName,phone:d.rPhone,company:d.rUnit||c?.company||''}))return;
@@ -545,12 +568,14 @@ $('tSite').innerHTML+=Object.keys(SITES).map(x=>`<option value="${esc(x)}">${x==
 document.documentElement.style.setProperty('--stripe','linear-gradient(90deg,'+TOP.map((t,i)=>`${t.c} ${(i/TOP.length*100).toFixed(2)}% ${((i+1)/TOP.length*100).toFixed(2)}%`).join(',')+')');
 ['bq','bAs','bTp','tq','tTp','tSb','tSt','tSite','tSort','cq','sPer'].forEach(i=>$(i).addEventListener('input',render));
 const V=['report','board','tickets','stats','people'];
-function route(){view=V.includes(location.hash.slice(1))?location.hash.slice(1):'report';
+function route(){view=!PUB&&V.includes(location.hash.slice(1))?location.hash.slice(1):'report';
   for(const v of V){$('v-'+v).hidden=v!==view;v===view?$('n-'+v).setAttribute('aria-current','page'):$('n-'+v).removeAttribute('aria-current')}render()}
 addEventListener('hashchange',()=>{route();$('main').focus()});route();
 
-pull();
 $('expBtn').onclick=exportCSV;
+if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
+  $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ותקלות</span><a href="tech/">כניסת צוות</a>';render()}
+else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
 }
 function k4uBoot(){
   if(window.CFG)return k4uStart();

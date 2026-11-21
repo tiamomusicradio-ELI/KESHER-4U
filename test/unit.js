@@ -26,3 +26,20 @@ const g2=makeContext();g2.setup();assert.strictEqual(g2.apiSync('', 0).setup, tr
 assert.throws(() => g.apiPut('pw', 'audit', 'x', {}, ''));
 assert.throws(() => g.apiPut('pw', 'tickets', 'a/b', {}, ''));
 console.log('unit OK; ticket row:', JSON.stringify(g.__ss.getSheetByName('קריאות').data[1].slice(0, 12)));
+// public report endpoint
+const g3 = makeContext(); g3.setup(); g3.__props.APP_PASSWORD = 'pw';
+let rr = g3.apiReport('', { topic: 'tel', sub: 'מכשיר תקול', site: '108', bldg: 'מכני', rName: 'רון', rPhone: '050-1112222', priority: 3 });
+assert.strictEqual(rr.num, 1001);
+rr = g3.apiReport('', { topic: 'evl', sub: 'גן אירועים', evDate: '2030-01-05', slot: 'ערב', rName: 'רון', rPhone: '0501112222' });
+assert.strictEqual(rr.num, 1002);
+const all = g3.apiSync('pw', 0).docs;
+assert.strictEqual(all.filter(d => d.col === 'customers').length, 1, 'reporter matched by phone');
+const ev = all.find(d => d.data && d.data.num === 1002).data;
+assert.strictEqual(ev.slot, 'ערב'); assert.strictEqual(ev.due, ev.eventAt); assert.strictEqual(ev.channel, 5);
+assert.throws(() => g3.apiReport('', { topic: 'tel', sub: 'לא קיים', site: '108', bldg: 'מכני', rName: 'x', rPhone: '0501112222' }));
+assert.throws(() => g3.apiReport('', { topic: 'tel', sub: 'מכשיר תקול', site: '108', bldg: 'ארז', rName: 'x', rPhone: '0501112222' }));
+assert.throws(() => g3.apiReport('', { topic: 'tel', sub: 'מכשיר תקול', rName: 'x', rPhone: '0501112222' }));
+assert.strictEqual(g3.apiSync('', 0).auth, false, 'public cannot read');
+for (let i = 0; i < 38; i++) g3.apiReport('', { topic: 'tel', sub: 'מכשיר תקול', site: '108', bldg: 'מכני', rName: 'x', rPhone: '0501112222' });
+assert.throws(() => g3.apiReport('', { topic: 'tel', sub: 'מכשיר תקול', site: '108', bldg: 'מכני', rName: 'x', rPhone: '0501112222' }), /עומס/);
+console.log('public report OK');
