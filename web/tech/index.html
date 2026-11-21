@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kesher-4U · ממשק צוות</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/favicon-64.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="theme-color" content="#10202a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="K4U צוות">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -41,6 +49,16 @@ html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-st
 .done{max-width:640px;margin:30px auto;text-align:center;background:#fff;border:3px solid var(--ok);border-radius:22px;box-shadow:0 8px 0 var(--ok);padding:28px 22px}
 .done .big-num{font-size:clamp(2.6rem,7vw,3.6rem);font-weight:800;color:var(--ok);line-height:1;margin:10px 0}
 .foot{max-width:1240px;margin:0 auto;padding:10px max(4vw,16px) 40px;color:var(--mut);font-size:.9rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.share[hidden]{display:none!important}
+.sheet{position:fixed;inset:auto 0 0 0;z-index:25;display:flex;justify-content:center;padding:0 12px 12px;pointer-events:none}
+.sheet>div{pointer-events:auto;width:min(520px,100%);background:#fff;border:3px solid #10202a;border-radius:22px;box-shadow:0 8px 0 #10202a,0 20px 50px #0005;padding:18px 18px 14px;animation:up .35s ease-out}
+@keyframes up{from{transform:translateY(120%)}to{transform:none}}
+.sheet .sh{display:flex;gap:14px;align-items:center;margin-bottom:8px}
+.sheet img{width:64px;height:64px;border-radius:16px;flex:none;box-shadow:0 3px 8px #0003}
+.sheet h2{font-size:1.2rem;margin:0}
+.sheet ol{margin:6px 0 10px;padding-inline-start:22px;line-height:1.8}
+.sheet .row{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.sheet .row button{width:100%;font-size:1rem;padding:0 10px}.sheet .row .pri{grid-column:1/-1}
+.ic-inline{display:inline-block;vertical-align:-5px;margin:0 3px}
 .tagl{font-size:clamp(1.05rem,1.8vw,1.3rem);font-weight:700;color:var(--mut)}
 .logo.glint::after{background:linear-gradient(100deg,transparent,rgba(255,209,102,.55),transparent)}
 h2{font-size:1.35rem;line-height:1.2;margin:0 0 .6rem}
@@ -189,6 +207,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
       <li><a href="#stats" id="n-stats">פילוח</a></li>
       <li><a href="#people" id="n-people">מדווחים</a></li>
     </ul></nav>
+    <button id="shareBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="shareLbl">שתף קישור</span></button>
     <div class="a11y">
       <button id="a11yBtn" aria-expanded="false" aria-controls="a11y" style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10.5"/><circle cx="12" cy="6.6" r="1.6" fill="currentColor"/><path d="M6.5 9.6l5.5 1.2 5.5-1.2M12 10.8v3.6l-2.6 4.6M12 14.4l2.6 4.6"/></svg>נגישות</button>
       <div id="a11y" hidden role="group" aria-label="הגדרות נגישות">
@@ -572,11 +591,56 @@ function route(){view=!PUB&&V.includes(location.hash.slice(1))?location.hash.sli
   for(const v of V){$('v-'+v).hidden=v!==view;v===view?$('n-'+v).setAttribute('aria-current','page'):$('n-'+v).removeAttribute('aria-current')}render()}
 addEventListener('hashchange',()=>{route();$('main').focus()});route();
 
-$('expBtn').onclick=exportCSV;
-if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
-  $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ותקלות</span><a href="tech/">כניסת צוות</a>';render()}
-else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
+
+/* ---- share link ---- */
+const pubUrl=()=>PUB?location.href.split('#')[0]:new URL('../',location.href).href;
+async function shareLink(){
+  const url=pubUrl(),data={title:'Kesher-4U · דיווח תקלה',text:'לדיווח על תקלה או בקשת שירות:',url};
+  if(navigator.share){try{await navigator.share(data);return}catch(e){if(e&&e.name==='AbortError')return}}
+  openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">שיתוף הקישור לדיווח</h2><button data-x>סגירה ✕</button></div>
+  <label>הקישור<input id="shUrl" value="${esc(url)}" readonly dir="ltr"></label>
+  <div class="row"><button class="pri big" id="shCopy">העתקת הקישור</button>
+  <a class="btn big" style="display:inline-flex;align-items:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(data.text+' '+url)}">שליחה בוואטסאפ</a></div>
+  <p class="note">אפשר גם להדפיס שלט עם קוד QR לקישור הזה.</p>`);
+  $('shCopy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('הקישור הועתק')}catch(e){$('shUrl').select();toast('סמנו והעתיקו עם Ctrl+C')}};
 }
+/* ---- add-to-home-screen prompt (mobile, first visit) ---- */
+const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Mac/.test(navigator.platform));
+const isMobile=isIOS||/Android|Mobile/i.test(navigator.userAgent);
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function installSheet(force){
+  if($('a2hs')||standalone())return;
+  if(!force&&($('loginDlg')||$('drawer').classList.contains('on'))){setTimeout(()=>installSheet(),4000);return}
+  const bip=window.__bip,icon=(PUB?'':'../')+'icons/icon-192.png',name=PUB?'דיווח תקלה':'K4U צוות';
+  const shareIc='<svg class="ic-inline" aria-label="שיתוף" role="img" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1d6a86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 11v9h14v-9"/></svg>';
+  const how=bip?'<p style="margin:0 0 6px">התקינו את הקיצור, והמערכת תיפתח מהמסך הראשי כמו אפליקציה, בלחיצה אחת.</p>'
+    :isIOS?`<ol><li>לחצו על כפתור השיתוף ${shareIc} בתחתית Safari</li><li>גללו ובחרו <b>"הוספה למסך הבית"</b></li><li>לחצו <b>"הוסף"</b></li></ol>`
+    :'<ol><li>פתחו את תפריט הדפדפן <b>⋮</b> בפינה העליונה</li><li>בחרו <b>"הוספה למסך הבית"</b> או <b>"התקנת אפליקציה"</b></li><li>אשרו</li></ol>';
+  const d=document.createElement('div');d.className='sheet';d.id='a2hs';
+  d.innerHTML=`<div role="dialog" aria-modal="false" aria-labelledby="a2hsT"><div class="sh"><img src="${icon}" alt=""><div><h2 id="a2hsT">שמירת לחצן מהיר במסך הבית</h2><small class="hint">"${name}" יופיע ליד שאר האפליקציות</small></div></div>${how}
+  <div class="row">${bip?'<button class="pri big" id="a2hsGo">הוספה למסך הבית</button>':''}<button class="big" id="a2hsLater">לא עכשיו</button><button class="big" id="a2hsNever">אל תציג שוב</button></div></div>`;
+  document.body.append(d);(bip?$('a2hsGo'):$('a2hsLater')).focus();
+  const close=v=>{ls('k4u_a2hs',v);d.remove()};
+  $('a2hsLater').onclick=()=>close('later:'+Date.now());$('a2hsNever').onclick=()=>close('never');
+  if(bip)$('a2hsGo').onclick=async()=>{bip.prompt();const r=await bip.userChoice.catch(()=>({}));window.__bip=null;close(r.outcome==='accepted'?'installed':'later:'+Date.now())};
+  d.addEventListener('keydown',e=>{if(e.key==='Escape')$('a2hsLater').click()});
+}
+function maybeInstall(){
+  if(!window.API_URL||!isMobile||standalone())return;
+  const st=ls('k4u_a2hs')||'';
+  if(st==='never'||st==='installed')return;
+  if(st.startsWith('later:')&&Date.now()-Number(st.slice(6))<7*864e5)return;
+  setTimeout(()=>installSheet(),2500);
+}
+$('expBtn').onclick=exportCSV;
+if(window.API_URL){$('shareBtn').hidden=false;$('shareLbl').textContent=PUB?'שתף קישור':'שתף קישור לדיווח';$('shareBtn').onclick=shareLink}
+if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
+  $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ותקלות</span><span style="display:flex;gap:18px">'+(isMobile&&!standalone()?'<a href="#" id="a2hsLink">הוספה למסך הבית</a>':'')+'<a href="tech/">כניסת צוות</a></span>';render()}
+else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
+maybeInstall();
+$('foot').addEventListener('click',e=>{if(e.target.id==='a2hsLink'){e.preventDefault();installSheet(true)}});
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e});
 function k4uBoot(){
   if(window.CFG)return k4uStart();
   if(!window.API_URL){document.getElementById('status').textContent='חסרה כתובת השרת: יש להגדיר API_URL בקובץ settings.js';return}
