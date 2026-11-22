@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><!--TITLE--></title>
 <!--HEAD-->
-<script>try{if(matchMedia('(pointer: coarse)').matches&&Math.min(screen.width,screen.height)<900&&!sessionStorage.getItem('k4u_splash')){document.documentElement.classList.add('splash');sessionStorage.setItem('k4u_splash','1')}}catch(e){}</script>
+<script>try{if((matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)&&!sessionStorage.getItem('k4u_splash')){document.documentElement.classList.add('splash');sessionStorage.setItem('k4u_splash','1')}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -38,13 +38,14 @@ h1{font-size:clamp(1.6rem,3.2vw,2.2rem);line-height:1.1;margin:0;font-weight:800
 .markbtn:hover{transform:scale(1.1) rotate(-6deg)}.markbtn:focus-visible{outline:4px solid var(--focus)!important;outline-offset:3px}
 .lz{position:fixed;inset:0;z-index:40;cursor:zoom-out;background:radial-gradient(circle at center,rgba(255,255,255,.92),rgba(255,255,255,.7))}
 .lz img{position:fixed;border-radius:50%;will-change:transform,opacity,filter;filter:drop-shadow(0 18px 40px #0006)}
-/* mobile splash: the coin fills the screen for a second, then zooms out and dissolves */
+/* mobile splash: steps are driven by script (in → hold → out) so nothing flashes before the image is ready */
 .splashv{display:none}
-html.splash .splashv{display:grid;place-items:center;position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 45%,#3d4a63 0,#232b3a 55%,#151a24 100%);animation:spl-bg 2.2s ease forwards}
-html.splash .splashv img{width:min(80vw,80vh);height:auto;border-radius:50%;filter:drop-shadow(0 18px 40px #000a);animation:spl 2.2s cubic-bezier(.4,0,.2,1) forwards}
-@keyframes spl{0%{transform:scale(.9);opacity:0}12%{transform:scale(1);opacity:1}55%{transform:scale(1.03);opacity:1;filter:drop-shadow(0 18px 40px #000a) blur(0)}100%{transform:scale(2.1);opacity:0;filter:drop-shadow(0 18px 40px #0000) blur(14px)}}
-@keyframes spl-bg{0%,58%{opacity:1}100%{opacity:0;visibility:hidden}}
-@media(prefers-reduced-motion:reduce){html.splash .splashv img{animation:spl-fade 2s forwards}@keyframes spl-fade{0%,10%{opacity:1}55%{opacity:1}100%{opacity:0}}}
+html.splash .splashv{display:grid;place-items:center;position:fixed;inset:0;z-index:100;background:#1c2330;transition:opacity 1.5s ease .6s}
+html.splash .splashv img{width:min(78vw,78vh);height:auto;border-radius:50%;box-shadow:0 24px 60px rgba(0,0,0,.55);opacity:0;transform:scale(.94);transition:opacity .45s ease,transform .6s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity}
+html.splash .splashv.in img{opacity:1;transform:scale(1)}
+html.splash .splashv.out{opacity:0;pointer-events:none}
+html.splash .splashv.out img{opacity:0;transform:scale(1.55);transition:opacity 1.8s ease-in .15s,transform 2.1s cubic-bezier(.25,.1,.25,1)}
+@media(prefers-reduced-motion:reduce){html.splash .splashv img,html.splash .splashv.out img{transform:none!important}}
 .tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap}.tools button{margin-bottom:5px}
 .logo{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 8px;border:3px solid #000;border-radius:18px;background:#fff;box-shadow:0 6px 0 #000;position:relative;overflow:hidden}
 .mark{width:clamp(46px,5vw,64px);height:clamp(46px,5vw,64px);flex:none;border-radius:50%;filter:drop-shadow(0 2px 3px #0004)}
@@ -198,6 +199,14 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
 </head>
 <body>
 <div class="splashv" id="splash" aria-hidden="true"><img src="%%LOGOBIG%%" alt=""></div>
+<script>(function(){var h=document.documentElement;if(!h.classList.contains('splash'))return;
+var sp=document.getElementById('splash'),im=sp.querySelector('img'),shown=0,ready=false,done=false;
+function finish(){if(done)return;done=true;sp.classList.add('out');setTimeout(function(){h.classList.remove('splash')},2300)}
+function tryOut(){if(shown&&ready&&Date.now()-shown>=1000)finish()}
+function show(){if(shown||done)return;requestAnimationFrame(function(){sp.classList.add('in');shown=Date.now();setTimeout(tryOut,1000)})}
+if(im.complete&&im.naturalWidth)show();else{im.onload=show;im.onerror=finish}
+window.k4uReady=function(){ready=true;tryOut()};
+sp.addEventListener('click',finish);setTimeout(function(){if(!shown)finish()},2500);setTimeout(function(){ready=true;tryOut()},4000)})();</script>
 <a class="skip" href="#main" target="_self">דילוג לתוכן הראשי</a>
 <header class="band top">
   <div class="head">
@@ -600,7 +609,7 @@ const isMobile=isIOS||/Android|Mobile/i.test(navigator.userAgent);
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function installSheet(force){
   if($('a2hs')||standalone())return;
-  if(!force&&($('loginDlg')||$('drawer').classList.contains('on'))){setTimeout(()=>installSheet(),4000);return}
+  if(!force&&($('loginDlg')||$('drawer').classList.contains('on')||document.documentElement.classList.contains('splash'))){setTimeout(()=>installSheet(),4000);return}
   const bip=window.__bip,icon=(PUB?'':'../')+'icons/icon-192.png',name=PUB?'קשר והגברה':'צוות K4U';
   const shareIc='<svg class="ic-inline" aria-label="שיתוף" role="img" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1d6a86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 11v9h14v-9"/></svg>';
   const how=bip?'<p style="margin:0 0 6px">התקינו את הקיצור, והמערכת תיפתח מהמסך הראשי כמו אפליקציה, בלחיצה אחת.</p>'
@@ -646,7 +655,7 @@ function zoomLogo(){
   ov.onclick=()=>{a.playbackRate=4;b.playbackRate=4};
 }
 $('logoBtn').onclick=zoomLogo;
-if(document.documentElement.classList.contains('splash')){const sp=$('splash'),end=()=>{document.documentElement.classList.remove('splash')};sp.addEventListener('click',end);sp.addEventListener('animationend',e=>{if(e.target===sp)end()});setTimeout(end,3000)}
+setTimeout(()=>window.k4uReady&&window.k4uReady(),50);
 $('expBtn').onclick=exportCSV;
 if(window.API_URL){$('shareBtn').hidden=false;$('shareLbl').textContent=PUB?'שתף קישור':'שתף קישור לדיווח';$('shareBtn').onclick=shareLink}
 if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
