@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><!--TITLE--></title>
 <!--HEAD-->
+<script>try{if(matchMedia('(pointer: coarse)').matches&&Math.min(screen.width,screen.height)<900&&!sessionStorage.getItem('k4u_splash')){document.documentElement.classList.add('splash');sessionStorage.setItem('k4u_splash','1')}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -37,6 +38,13 @@ h1{font-size:clamp(1.6rem,3.2vw,2.2rem);line-height:1.1;margin:0;font-weight:800
 .markbtn:hover{transform:scale(1.1) rotate(-6deg)}.markbtn:focus-visible{outline:4px solid var(--focus)!important;outline-offset:3px}
 .lz{position:fixed;inset:0;z-index:40;cursor:zoom-out;background:radial-gradient(circle at center,rgba(255,255,255,.92),rgba(255,255,255,.7))}
 .lz img{position:fixed;border-radius:50%;will-change:transform,opacity,filter;filter:drop-shadow(0 18px 40px #0006)}
+/* mobile splash: the coin fills the screen for a second, then zooms out and dissolves */
+.splashv{display:none}
+html.splash .splashv{display:grid;place-items:center;position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 45%,#3d4a63 0,#232b3a 55%,#151a24 100%);animation:spl-bg 2.2s ease forwards}
+html.splash .splashv img{width:min(80vw,80vh);height:auto;border-radius:50%;filter:drop-shadow(0 18px 40px #000a);animation:spl 2.2s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes spl{0%{transform:scale(.9);opacity:0}12%{transform:scale(1);opacity:1}55%{transform:scale(1.03);opacity:1;filter:drop-shadow(0 18px 40px #000a) blur(0)}100%{transform:scale(2.1);opacity:0;filter:drop-shadow(0 18px 40px #0000) blur(14px)}}
+@keyframes spl-bg{0%,58%{opacity:1}100%{opacity:0;visibility:hidden}}
+@media(prefers-reduced-motion:reduce){html.splash .splashv img{animation:spl-fade 2s forwards}@keyframes spl-fade{0%,10%{opacity:1}55%{opacity:1}100%{opacity:0}}}
 .tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap}.tools button{margin-bottom:5px}
 .logo{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 8px;border:3px solid #000;border-radius:18px;background:#fff;box-shadow:0 6px 0 #000;position:relative;overflow:hidden}
 .mark{width:clamp(46px,5vw,64px);height:clamp(46px,5vw,64px);flex:none;border-radius:50%;filter:drop-shadow(0 2px 3px #0004)}
@@ -78,11 +86,6 @@ button:active{transform:translateY(4px);box-shadow:0 1px 0 var(--edge)}
 .big{min-height:60px;font-size:1.15rem;padding:0 28px}
 .dng{color:var(--mag);border-color:var(--mag);box-shadow:0 5px 0 var(--mag)}
 :focus-visible{outline:4px solid var(--focus)!important;outline-offset:3px}
-.a11y{position:relative}
-#a11y{position:absolute;inset-inline-end:0;top:calc(100% + 8px);background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;z-index:15;width:280px;box-shadow:0 10px 30px #0003;display:grid;gap:8px}
-#a11y[hidden]{display:none}
-#a11y button{width:100%;text-align:start}
-#a11y button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:#000}
 .zrow{display:flex;gap:8px}.zrow button{flex:1;text-align:center!important}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:1240px;margin:16px auto 0;padding:0;list-style:none}
 .kpi{background:var(--card);border:3px solid var(--line);box-shadow:0 5px 0 var(--line);border-radius:14px;padding:10px 14px}
@@ -194,10 +197,11 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
 <script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
 </head>
 <body>
+<div class="splashv" id="splash" aria-hidden="true"><img src="%%LOGOBIG%%" alt=""></div>
 <a class="skip" href="#main" target="_self">דילוג לתוכן הראשי</a>
 <header class="band top">
   <div class="head">
-    <h1 class="brand"><span class="logo glint" dir="ltr"><button type="button" class="markbtn" id="logoBtn" aria-label="הצגת הלוגו בגדול"><img class="mark" src="%%LOGO%%" alt="" width="64" height="64"></button><span class="wm">Kesher<b>-4U</b></span></span><span class="tagl">מוקד שירות ותקלות</span></h1>
+    <h1 class="brand"><span class="logo glint" dir="ltr"><button type="button" class="markbtn" id="logoBtn" aria-label="הצגת הלוגו בגדול"><img class="mark" src="%%LOGO%%" alt="" width="64" height="64"></button><span class="wm">Kesher<b>-4U</b></span></span><span class="tagl">מוקד שירות ודיווח תקלות קשר</span></h1>
     <nav aria-label="ניווט ראשי"><ul>
       <li><a href="#report" id="n-report">דיווח</a></li>
       <li><a href="#board" id="n-board">לוח קריאות</a></li>
@@ -207,16 +211,6 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
     </ul></nav>
     <div class="tools">
     <button id="shareBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="shareLbl">שתף קישור</span></button>
-    <div class="a11y">
-      <button id="a11yBtn" aria-expanded="false" aria-controls="a11y" style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10.5"/><circle cx="12" cy="6.6" r="1.6" fill="currentColor"/><path d="M6.5 9.6l5.5 1.2 5.5-1.2M12 10.8v3.6l-2.6 4.6M12 14.4l2.6 4.6"/></svg>נגישות</button>
-      <div id="a11y" hidden role="group" aria-label="הגדרות נגישות">
-        <div class="zrow"><button id="zUp" aria-label="הגדלת טקסט">א+</button><button id="zDn" aria-label="הקטנת טקסט">א−</button></div>
-        <button id="aHc" aria-pressed="false">ניגודיות גבוהה</button>
-        <button id="aUl" aria-pressed="false">הדגשת קישורים</button>
-        <button id="aSt" aria-pressed="false">עצירת אנימציות</button>
-        <button id="aRs">איפוס הגדרות</button>
-      </div>
-    </div>
     </div>
   </div>
   <ul class="kpis" id="kpis" aria-label="מדדים עיקריים"></ul>
@@ -314,15 +308,8 @@ const toast=m=>{const e=$('toast');e.textContent=m;clearTimeout(toast.t);toast.t
 const cust=id=>S.customers.find(c=>c.id===id);
 
 /* ---- accessibility settings ---- */
-const A=JSON.parse(ls('a11y')||'{"z":1,"hc":0,"ul":0,"st":0}');
-function applyA(){const r=document.documentElement;r.style.setProperty('--z',A.z);r.classList.toggle('hc',!!A.hc);r.classList.toggle('ul',!!A.ul);r.classList.toggle('still',!!A.st);
-  $('aHc').setAttribute('aria-pressed',!!A.hc);$('aUl').setAttribute('aria-pressed',!!A.ul);$('aSt').setAttribute('aria-pressed',!!A.st);ls('a11y',JSON.stringify(A))}
-$('a11yBtn').onclick=()=>{const o=$('a11y').hidden;$('a11y').hidden=!o;$('a11yBtn').setAttribute('aria-expanded',o)};
-$('zUp').onclick=()=>{A.z=Math.min(1.6,+(A.z+.1).toFixed(1));applyA();toast('גודל טקסט '+Math.round(A.z*100)+'%')};
-$('zDn').onclick=()=>{A.z=Math.max(.9,+(A.z-.1).toFixed(1));applyA();toast('גודל טקסט '+Math.round(A.z*100)+'%')};
-$('aHc').onclick=()=>{A.hc^=1;applyA()};$('aUl').onclick=()=>{A.ul^=1;applyA()};$('aSt').onclick=()=>{A.st^=1;applyA()};
-$('aRs').onclick=()=>{Object.assign(A,{z:1,hc:0,ul:0,st:0});applyA();toast('ההגדרות אופסו')};
-applyA();
+/* accessibility toolbar removed; clear settings saved by earlier versions */
+try{localStorage.removeItem('a11y')}catch(e){}
 
 /* ---- storage: Google Apps Script → Google Sheets ---- */
 const pw=()=>ls('k4u_pw')||'';
@@ -518,7 +505,11 @@ function newTicket(k){
         const r=await call('apiReport',{topic:k,sub,title:d.title,desc:d.desc,priority:+d.priority,site:loc?d.site:'',bldg:loc?d.bldg:'',location:loc?d.location:'',evDate:ev?d.evDate:'',slot:ev?d.slot:'',rName:d.rName,rPhone:d.rPhone,rUnit:d.rUnit});
         ls('rep',JSON.stringify({n:d.rName,p:d.rPhone,u:d.rUnit}));
         done(r.num,T,sub);
-      }catch(e){btn.disabled=false;btn.textContent='שליחת הדיווח';$('fErr').textContent=String(e&&e.message||'').includes('עומס')?'יש עומס כרגע — נסו שוב בעוד כמה דקות':'השליחה נכשלה — בדקו את החיבור ונסו שוב'}
+      }catch(e){btn.disabled=false;btn.textContent='שליחת הדיווח';const m=String(e&&e.message||'');
+        $('fErr').textContent=/unknown function/i.test(m)?'השרת עוד לא עודכן לגרסה החדשה. יש לבצע פריסה חדשה ב־Apps Script.'
+          :/[\u0590-\u05FF]/.test(m)?'לא נשלח: '+m
+          :/Failed to fetch|NetworkError|Load failed/i.test(m)?'אין חיבור לשרת — בדקו את האינטרנט ונסו שוב'
+          :'השליחה נכשלה ('+m.slice(0,80)+') — נסו שוב'}
       return;
     }
     const dig=s=>s.replace(/\D/g,'');let c=S.customers.find(c=>dig(c.phone||'')===dig(d.rPhone)&&dig(d.rPhone))||S.customers.find(c=>c.name===d.rName);
@@ -572,13 +563,12 @@ function person(id){
 
 /* ---- events & routing ---- */
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.a11y')&&!$('a11y').hidden){$('a11y').hidden=true;$('a11yBtn').setAttribute('aria-expanded','false')}
   if(e.target.closest('[data-x]')||e.target===$('veil'))return closeD();
   const n=e.target.closest('[data-new]');if(n)return newTicket(n.dataset.new);
   const tk=e.target.closest('[data-t]');if(tk)return ticket(tk.dataset.t);
   const cc=e.target.closest('[data-c]');if(cc&&cc.dataset.c)return person(cc.dataset.c);
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('a11y').hidden){$('a11y').hidden=true;$('a11yBtn').focus()}else if($('drawer').classList.contains('on'))closeD()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('drawer').classList.contains('on'))closeD()});
 $('newC').onclick=()=>person(null);
 $('bTp').innerHTML=tOpts('');$('tTp').innerHTML=tOpts('');$('tSt').innerHTML='<option value="">כל הסטטוסים</option>'+opts(ST,-1);
 const fillSub=()=>{const k=$('tTp').value;$('tSb').innerHTML='<option value="">כל תתי־הנושא</option>'+(TK[k]?.s||[]).map(s=>`<option>${esc(s)}</option>`).join('');$('tSb').disabled=!k};
@@ -656,10 +646,11 @@ function zoomLogo(){
   ov.onclick=()=>{a.playbackRate=4;b.playbackRate=4};
 }
 $('logoBtn').onclick=zoomLogo;
+if(document.documentElement.classList.contains('splash')){const sp=$('splash'),end=()=>{document.documentElement.classList.remove('splash')};sp.addEventListener('click',end);sp.addEventListener('animationend',e=>{if(e.target===sp)end()});setTimeout(end,3000)}
 $('expBtn').onclick=exportCSV;
 if(window.API_URL){$('shareBtn').hidden=false;$('shareLbl').textContent=PUB?'שתף קישור':'שתף קישור לדיווח';$('shareBtn').onclick=shareLink}
 if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
-  $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ותקלות</span><span style="display:flex;gap:18px">'+(isMobile&&!standalone()?'<a href="#" id="a2hsLink">הוספה למסך הבית</a>':'')+'<a href="tech/">כניסת צוות</a></span>';render()}
+  $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ודיווח תקלות קשר</span><span style="display:flex;gap:18px">'+(isMobile&&!standalone()?'<a href="#" id="a2hsLink">הוספה למסך הבית</a>':'')+'<a href="tech/">כניסת צוות</a></span>';render()}
 else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
 maybeInstall();
 $('foot').addEventListener('click',e=>{if(e.target.id==='a2hsLink'){e.preventDefault();installSheet(true)}});
