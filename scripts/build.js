@@ -19,12 +19,13 @@ const HEAD = (pre, title) => [
   '<meta name="apple-mobile-web-app-status-bar-style" content="default">',
   `<meta name="apple-mobile-web-app-title" content="${title}">`,
 ].join('\n');
+const LOGO_DATA = 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'web', 'icons', 'logo-round.png')).toString('base64');
 const out = {
-  'web/index.html': src.replace('<!--TITLE-->', 'Kesher-4U · דיווח תקלה').replace('<!--HEAD-->', HEAD('', 'דיווח תקלה'))
+  'web/index.html': src.replace('<!--TITLE-->', 'Kesher-4U · קשר והגברה').replace('<!--HEAD-->', HEAD('', 'קשר והגברה')).replace('%%LOGO%%', 'icons/logo-round.png').replace('%%LOGOBIG%%', 'icons/logo-512.webp')
     .replace('<!--SETTINGS-->', '<script src="settings.js"></script><script>window.K4U_MODE=\'public\'</script>'),
-  'web/tech/index.html': src.replace('<!--TITLE-->', 'Kesher-4U · ממשק צוות').replace('<!--HEAD-->', HEAD('../', 'K4U צוות'))
+  'web/tech/index.html': src.replace('<!--TITLE-->', 'Kesher-4U · ממשק צוות').replace('<!--HEAD-->', HEAD('../', 'צוות K4U')).replace('%%LOGO%%', '../icons/logo-round.png').replace('%%LOGOBIG%%', '../icons/logo-512.webp')
     .replace('<!--SETTINGS-->', '<script src="../settings.js"></script>'),
-  'apps-script/Index.html': src.replace('<!--TITLE-->', 'Kesher-4U · ממשק צוות').replace('<!--HEAD-->', '')
+  'apps-script/Index.html': src.replace('<!--TITLE-->', 'Kesher-4U · ממשק צוות').replace('<!--HEAD-->', '').replace('%%LOGO%%', LOGO_DATA).replace('%%LOGOBIG%%', LOGO_DATA)
     .replace('<!--SETTINGS-->', "<script>var API_URL='';var CFG=<?!= cfg ?>;var TOP=CFG.TOP,SITES=CFG.SITES,SLOT=CFG.SLOT,OUT=CFG.OUT;</script>"),
 };
 module.exports = out;

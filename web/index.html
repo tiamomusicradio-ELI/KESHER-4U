@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kesher-4U · דיווח תקלה</title>
+<title>Kesher-4U · קשר והגברה</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon-64.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="דיווח תקלה">
+<meta name="apple-mobile-web-app-title" content="קשר והגברה">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -39,10 +39,15 @@ body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.6 Heebo,system-u
 .top::after{content:"";position:absolute;inset:auto 0 0 0;height:8px;background:var(--stripe,var(--ink))}
 .head{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;max-width:1240px;margin:auto}
 h1{font-size:clamp(1.6rem,3.2vw,2.2rem);line-height:1.1;margin:0;font-weight:800;flex:1 1 240px}
-.brand{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:0 1 auto;margin:0}.logo{flex:none}
+.markbtn{all:unset;display:inline-flex;border-radius:50%;cursor:zoom-in;transition:transform .25s ease}
+.markbtn:hover{transform:scale(1.1) rotate(-6deg)}.markbtn:focus-visible{outline:4px solid var(--focus)!important;outline-offset:3px}
+.lz{position:fixed;inset:0;z-index:40;cursor:zoom-out;background:radial-gradient(circle at center,rgba(255,255,255,.92),rgba(255,255,255,.7))}
+.lz img{position:fixed;border-radius:50%;will-change:transform,opacity,filter;filter:drop-shadow(0 18px 40px #0006)}
+.tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap}.tools button{margin-bottom:5px}
 .logo{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 8px;border:3px solid #000;border-radius:18px;background:#fff;box-shadow:0 6px 0 #000;position:relative;overflow:hidden}
-.mark{width:clamp(44px,5vw,56px);height:auto;flex:none}
-.wm{font-size:clamp(1.7rem,3.4vw,2.4rem);font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
+.mark{width:clamp(46px,5vw,64px);height:clamp(46px,5vw,64px);flex:none;border-radius:50%;filter:drop-shadow(0 2px 3px #0004)}
+.wm{white-space:nowrap;font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
 .wm b{background:linear-gradient(90deg,#b8086a,#a3361f);-webkit-background-clip:text;background-clip:text;color:transparent}
 :root.hc .wm b{color:#000;background:none}
 html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-stats,html.pub #v-people{display:none!important}
@@ -59,7 +64,7 @@ html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-st
 .sheet ol{margin:6px 0 10px;padding-inline-start:22px;line-height:1.8}
 .sheet .row{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.sheet .row button{width:100%;font-size:1rem;padding:0 10px}.sheet .row .pri{grid-column:1/-1}
 .ic-inline{display:inline-block;vertical-align:-5px;margin:0 3px}
-.tagl{font-size:clamp(1.05rem,1.8vw,1.3rem);font-weight:700;color:var(--mut)}
+.tagl{font-size:clamp(1rem,1.5vw,1.15rem);padding-inline-start:6px;font-weight:700;color:var(--mut)}
 .logo.glint::after{background:linear-gradient(100deg,transparent,rgba(255,209,102,.55),transparent)}
 h2{font-size:1.35rem;line-height:1.2;margin:0 0 .6rem}
 .lead{font-size:clamp(1.6rem,3vw,2.1rem);font-weight:800;margin:.2rem 0 .3rem;line-height:1.15}
@@ -199,7 +204,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
 <a class="skip" href="#main" target="_self">דילוג לתוכן הראשי</a>
 <header class="band top">
   <div class="head">
-    <h1 class="brand"><span class="logo glint" dir="ltr"><svg class="mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d6a86"/><stop offset="1" stop-color="#10202a"/></linearGradient></defs><rect x="2" y="2" width="44" height="44" rx="12" fill="url(#lg)"/><rect x="2" y="2" width="44" height="44" rx="12" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/><circle cx="15" cy="33" r="4" fill="#fff"/><path d="M15 22a11 11 0 0 1 11 11M15 13a20 20 0 0 1 20 20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M33 7l-5 9h5l-4 8" fill="none" stroke="#ffd166" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="wm">Kesher<b>-4U</b></span></span><span class="tagl">מוקד שירות ותקלות</span></h1>
+    <h1 class="brand"><span class="logo glint" dir="ltr"><button type="button" class="markbtn" id="logoBtn" aria-label="הצגת הלוגו בגדול"><img class="mark" src="icons/logo-round.png" alt="" width="64" height="64"></button><span class="wm">Kesher<b>-4U</b></span></span><span class="tagl">מוקד שירות ותקלות</span></h1>
     <nav aria-label="ניווט ראשי"><ul>
       <li><a href="#report" id="n-report">דיווח</a></li>
       <li><a href="#board" id="n-board">לוח קריאות</a></li>
@@ -207,6 +212,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
       <li><a href="#stats" id="n-stats">פילוח</a></li>
       <li><a href="#people" id="n-people">מדווחים</a></li>
     </ul></nav>
+    <div class="tools">
     <button id="shareBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="shareLbl">שתף קישור</span></button>
     <div class="a11y">
       <button id="a11yBtn" aria-expanded="false" aria-controls="a11y" style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10.5"/><circle cx="12" cy="6.6" r="1.6" fill="currentColor"/><path d="M6.5 9.6l5.5 1.2 5.5-1.2M12 10.8v3.6l-2.6 4.6M12 14.4l2.6 4.6"/></svg>נגישות</button>
@@ -217,6 +223,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
         <button id="aSt" aria-pressed="false">עצירת אנימציות</button>
         <button id="aRs">איפוס הגדרות</button>
       </div>
+    </div>
     </div>
   </div>
   <ul class="kpis" id="kpis" aria-label="מדדים עיקריים"></ul>
@@ -275,7 +282,7 @@ table{font-size:.85rem}.stack thead{display:none}.stack tr{display:grid;padding-
 <div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="settings.js"></script><script>window.K4U_MODE='public'</script>
+<script src="settings.js"></script><script>window.K4U_MODE='public'</script><script>var BIG_LOGO="icons/logo-512.webp";</script>
 <script>
 function k4uStart(){
 const I={
@@ -611,7 +618,7 @@ const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator
 function installSheet(force){
   if($('a2hs')||standalone())return;
   if(!force&&($('loginDlg')||$('drawer').classList.contains('on'))){setTimeout(()=>installSheet(),4000);return}
-  const bip=window.__bip,icon=(PUB?'':'../')+'icons/icon-192.png',name=PUB?'דיווח תקלה':'K4U צוות';
+  const bip=window.__bip,icon=(PUB?'':'../')+'icons/icon-192.png',name=PUB?'קשר והגברה':'צוות K4U';
   const shareIc='<svg class="ic-inline" aria-label="שיתוף" role="img" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1d6a86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 11v9h14v-9"/></svg>';
   const how=bip?'<p style="margin:0 0 6px">התקינו את הקיצור, והמערכת תיפתח מהמסך הראשי כמו אפליקציה, בלחיצה אחת.</p>'
     :isIOS?`<ol><li>לחצו על כפתור השיתוף ${shareIc} בתחתית Safari</li><li>גללו ובחרו <b>"הוספה למסך הבית"</b></li><li>לחצו <b>"הוסף"</b></li></ol>`
@@ -632,6 +639,30 @@ function maybeInstall(){
   if(st.startsWith('later:')&&Date.now()-Number(st.slice(6))<7*864e5)return;
   setTimeout(()=>installSheet(),2500);
 }
+
+/* ---- logo zoom: grows gently out of the header, then dissolves ---- */
+function zoomLogo(){
+  if($('lz'))return;
+  const src=$('logoBtn').querySelector('img'),r=src.getBoundingClientRect();
+  const S=Math.min(innerWidth,innerHeight)*.72,size=Math.min(S,560);
+  const ov=document.createElement('div');ov.className='lz';ov.id='lz';ov.setAttribute('aria-hidden','true');
+  const im=new Image();im.src=BIG_LOGO;im.alt='';
+  Object.assign(im.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+  ov.append(im);document.body.append(ov);
+  const k=size/r.width,dx=innerWidth/2-(r.left+r.width/2),dy=innerHeight/2-(r.top+r.height/2);
+  const end=`translate(${dx}px,${dy}px) scale(${k})`,still=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.classList.contains('still');
+  const frames=still
+    ?[{transform:end,opacity:0},{transform:end,opacity:1,offset:.2},{transform:end,opacity:1,offset:.8},{transform:end,opacity:0}]
+    :[{transform:'none',opacity:1,filter:'blur(0px)',easing:'cubic-bezier(.2,.7,.2,1)'},
+      {transform:end,opacity:1,filter:'blur(0px)',offset:.32},
+      {transform:`translate(${dx}px,${dy}px) scale(${k*1.03})`,opacity:1,filter:'blur(0px)',offset:.68,easing:'ease-in'},
+      {transform:`translate(${dx}px,${dy}px) scale(${k*1.22})`,opacity:0,filter:'blur(14px)'}];
+  const a=im.animate(frames,{duration:still?1800:2600,fill:'forwards'});
+  const b=ov.animate([{opacity:0},{opacity:1,offset:.25},{opacity:1,offset:.7},{opacity:0}],{duration:still?1800:2600,fill:'forwards'});
+  const done=()=>ov.remove();a.onfinish=done;
+  ov.onclick=()=>{a.playbackRate=4;b.playbackRate=4};
+}
+$('logoBtn').onclick=zoomLogo;
 $('expBtn').onclick=exportCSV;
 if(window.API_URL){$('shareBtn').hidden=false;$('shareLbl').textContent=PUB?'שתף קישור':'שתף קישור לדיווח';$('shareBtn').onclick=shareLink}
 if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
