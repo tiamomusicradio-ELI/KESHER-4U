@@ -46,13 +46,28 @@ html.splash .splashv.in img{opacity:1;transform:scale(1)}
 html.splash .splashv.out{opacity:0;pointer-events:none}
 html.splash .splashv.out img{opacity:0;transform:scale(1.55);transition:opacity 1.8s ease-in .15s,transform 2.1s cubic-bezier(.25,.1,.25,1)}
 @media(prefers-reduced-motion:reduce){html.splash .splashv img,html.splash .splashv.out img{transform:none!important}}
+/* full-screen login page: big coin on top, sign-in fields underneath */
+.loginpage{position:fixed;inset:0;z-index:30;overflow-y:auto;background:radial-gradient(circle at 50% 18%,#ffffff 0,#f3f6f8 55%,#e6ecef 100%);display:flex;justify-content:center;padding:max(24px,env(safe-area-inset-top)) 18px 32px}
+.loginpage form{width:min(420px,100%);display:flex;flex-direction:column;align-items:stretch}
+.loginpage .bigcoin{display:block;width:min(62vw,250px);height:auto;margin:4px auto 10px;border-radius:50%;filter:drop-shadow(0 14px 26px rgba(0,0,0,.35));animation:coinIn .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes coinIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.loginpage .bigcoin{animation:none}}
+.loginpage h2{text-align:center;font-size:1.6rem;margin:0 0 4px}
+.loginpage .sub{text-align:center;color:var(--mut);margin:0 0 18px;font-size:.95rem}
+.loginpage .card{background:#fff;border:3px solid #10202a;box-shadow:0 8px 0 #10202a;border-radius:22px;padding:20px 18px 16px}
+.loginpage .foot2{text-align:center;color:var(--mut);font-size:.9rem;margin:16px 0 0}
+@media(max-height:640px){.loginpage .bigcoin{width:min(40vw,150px)}}
 .tools{display:flex;gap:10px;align-items:center;margin-inline-start:auto;flex-wrap:wrap}.tools button{margin-bottom:5px}
 .logo{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 8px;border:3px solid #000;border-radius:18px;background:#fff;box-shadow:0 6px 0 #000;position:relative;overflow:hidden}
 .mark{width:clamp(46px,5vw,64px);height:clamp(46px,5vw,64px);flex:none;border-radius:50%;filter:drop-shadow(0 2px 3px #0004)}
 .wm{white-space:nowrap;font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;letter-spacing:-.02em;line-height:1;color:var(--ink)}
 .wm b{background:linear-gradient(90deg,#b8086a,#a3361f);-webkit-background-clip:text;background-clip:text;color:transparent}
 :root.hc .wm b{color:#000;background:none}
-html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-stats,html.pub #v-people{display:none!important}
+html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-stats,html.pub #v-people,html.pub #v-members{display:none!important}
+.who{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:.95rem}.who[hidden]{display:none}
+.who button{min-height:40px;padding:0 12px;font-size:.9rem}
+.mlist .off td{color:var(--mut);text-decoration:line-through}
+.pill{display:inline-block;padding:1px 10px;border-radius:99px;font-size:.82rem;font-weight:700;background:#e3f1e8;color:var(--ok)}.pill.no{background:#f1e3e3;color:var(--mag)}
 .done{max-width:640px;margin:30px auto;text-align:center;background:#fff;border:3px solid var(--ok);border-radius:22px;box-shadow:0 8px 0 var(--ok);padding:28px 22px}
 .done .big-num{font-size:clamp(2.6rem,7vw,3.6rem);font-weight:800;color:var(--ok);line-height:1;margin:10px 0}
 .foot{max-width:1240px;margin:0 auto;padding:10px max(4vw,16px) 40px;color:var(--mut);font-size:.9rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -217,8 +232,10 @@ sp.addEventListener('click',finish);setTimeout(function(){if(!shown)finish()},25
       <li><a href="#tickets" id="n-tickets">כל הקריאות</a></li>
       <li><a href="#stats" id="n-stats">פילוח</a></li>
       <li><a href="#people" id="n-people">מדווחים</a></li>
+      <li><a href="#members" id="n-members">מורשים</a></li>
     </ul></nav>
     <div class="tools">
+    <span class="who" id="who" hidden><span id="whoName"></span><button type="button" id="logoutBtn">יציאה</button></span>
     <button id="shareBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="shareLbl">שתף קישור</span></button>
     </div>
   </div>
@@ -272,6 +289,15 @@ sp.addEventListener('click',finish);setTimeout(function(){if(!shown)finish()},25
     </div>
     <div class="cust" id="cust"></div>
   </section>
+  <section id="v-members" hidden aria-labelledby="mh">
+    <h2 id="mh">מורשי דיווח</h2>
+    <p class="note">רק מי שברשימה יכול לפתוח קריאה בדף הדיווח. הכניסה: שם פרטי, שם משפחה ו־4 הספרות האחרונות של המספר האישי. הספרות נשמרות מוצפנות, ואי אפשר לצפות בהן. אם מישהו שכח, מזינים לו 4 ספרות מחדש.</p>
+    <div class="bar">
+      <label class="q">חיפוש<input id="mq" type="search" placeholder="שם, יחידה או טלפון"></label>
+      <button class="pri" id="newM">+ הוספת מורשה</button>
+    </div>
+    <div id="mTable"></div>
+  </section>
 </main>
 <footer class="foot" id="foot"></footer>
 <div class="veil" id="veil"></div>
@@ -295,7 +321,7 @@ const TK=Object.fromEntries(TOP.map(t=>[t.k,t]));
 const ST=['חדשה','בטיפול','ממתינה למדווח','סגורה'],PR=['נמוכה','רגילה','גבוהה','דחופה'],SLA_H=[168,72,24,4];
 const CH=['טלפון','מכשיר קשר','מייל','וואטסאפ','פנייה אישית','דיווח עצמי באתר'];
 const PUB=window.K4U_MODE==='public';
-const S={tickets:[],customers:[]};
+const S={tickets:[],customers:[],members:[]};
 let view='report',openId=null,lastFocus=null;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -322,9 +348,12 @@ try{localStorage.removeItem('a11y')}catch(e){}
 
 /* ---- storage: Google Apps Script → Google Sheets ---- */
 const pw=()=>ls('k4u_pw')||'';
+const mtok=()=>ls('k4u_mt')||'';
+const validPhone=p=>/^0(5\d{8}|[2-46-9]\d{7}|7\d{8})$/.test(String(p||'').replace(/[\s\-().]/g,'').replace(/^\+?972/,'0'));
 const call=(fn,...a)=>{
-  if(window.google&&google.script&&google.script.run)return new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](pw(),...a));
-  return fetch(API_URL,{method:'POST',body:JSON.stringify({fn,args:[pw(),...a]}),headers:{'Content-Type':'text/plain;charset=utf-8'}})
+  const T0=PUB?mtok():pw();
+  if(window.google&&google.script&&google.script.run)return new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](T0,...a));
+  return fetch(API_URL,{method:'POST',body:JSON.stringify({fn,args:[T0,...a]}),headers:{'Content-Type':'text/plain;charset=utf-8'}})
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(o=>{if(!o.ok)throw new Error(o.error);return o.result});
 };
 function put(col,doc){const a=S[col],i=a.findIndex(x=>x.id===doc.id);i<0?a.push(doc):a[i]=doc}
@@ -352,14 +381,47 @@ async function pull(){
   pullT=setTimeout(pull,document.hidden?60000:fails?20000:15000);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!first)pull()});
+let MEM=null;try{MEM=JSON.parse(ls('k4u_mem')||'null')}catch(e){}
+function showWho(){const w=$('who');if(!PUB||!MEM){w.hidden=true;return}$('whoName').textContent='שלום, '+MEM.first;w.hidden=false}
+function memberLogin(why){
+  if($('mLogin'))return;
+  const d=document.createElement('div');d.id='mLogin';d.className='loginpage';
+  d.innerHTML=`<form role="dialog" aria-modal="true" aria-labelledby="mlT" novalidate>
+    <img class="bigcoin" src="${BIG_LOGO}" alt="Kesher 4U — פתיחת קריאת שירות">
+    <h2 id="mlT">כניסה לדיווח תקלה</h2>
+    <p class="sub">למורשים בלבד. מזדהים פעם אחת, והטלפון יזכור אתכם 30 יום.</p>
+    <div class="card">
+    <label>שם פרטי<input id="mlF" autocomplete="given-name" required></label>
+    <label>שם משפחה<input id="mlL" autocomplete="family-name" required></label>
+    <label>4 ספרות אחרונות של המספר האישי<input id="mlD" type="password" inputmode="numeric" maxlength="4" autocomplete="off" dir="ltr" style="letter-spacing:.5em;font-size:1.4rem;text-align:center" required></label>
+    <p class="late" id="mlE" role="alert">${why==='expired'?'פג תוקף הכניסה, יש להזדהות מחדש':''}</p>
+    <button class="pri big" style="width:100%">כניסה</button></div>
+    <p class="foot2">לא ברשימה? פנו לממונה בכיר יותר אצלכם ביחידה.</p></form>`;
+  document.body.append(d);$('mlF').focus();
+  $('mlD').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
+  d.querySelector('form').onsubmit=async e=>{e.preventDefault();
+    const first=$('mlF').value.trim(),last=$('mlL').value.trim(),digits=$('mlD').value;
+    if(!first||!last||!/^\d{4}$/.test(digits)){$('mlE').textContent='יש למלא שם פרטי, שם משפחה ו־4 ספרות';return}
+    const b=d.querySelector('button');b.disabled=true;b.textContent='בודק…';
+    try{const r=await call('apiLogin',{first,last,digits});
+      if(r.ok){ls('k4u_mt',r.token);ls('k4u_mem',JSON.stringify(r.member));MEM=r.member;d.remove();showWho();toast('שלום '+MEM.first+', אפשר לדווח');return}
+      $('mlE').textContent=r.reason==='locked'?'יותר מדי ניסיונות שגויים. נסו שוב בעוד 15 דקות.':r.reason==='fields'?'יש למלא את כל השדות':'הפרטים לא נמצאו ברשימת המורשים — מוזמן לפנות לממונה בכיר יותר אצלך ביחידה'+(r.left?`. נותרו ${r.left} ניסיונות.`:'');
+    }catch(err){const m=String(err&&err.message||'');$('mlE').textContent=/unknown function/i.test(m)?'השרת עוד לא עודכן. יש לבצע פריסה חדשה ב־Apps Script.':'אין חיבור לשרת — נסו שוב'}
+    b.disabled=false;b.textContent='כניסה';$('mlD').value='';$('mlD').focus()};
+}
 function login(noPw){
   clearTimeout(pullT);
   if($('loginDlg'))return;
-  const d=document.createElement('div');d.id='loginDlg';d.className='veil on';d.style.display='grid';d.style.placeItems='center';
-  d.innerHTML=`<form role="dialog" aria-modal="true" aria-labelledby="lgT" style="background:#fff;border:3px solid #000;box-shadow:0 8px 0 #000;border-radius:20px;padding:24px;width:min(420px,92vw)">
-    <h2 id="lgT">כניסה ל־Kesher-4U</h2><label>סיסמה<input type="password" id="lgP" autocomplete="current-password" required></label>
+  const d=document.createElement('div');d.id='loginDlg';d.className='loginpage';
+  d.innerHTML=`<form role="dialog" aria-modal="true" aria-labelledby="lgT" novalidate>
+    <img class="bigcoin" src="${BIG_LOGO}" alt="Kesher 4U — פתיחת קריאת שירות">
+    <h2 id="lgT">כניסת צוות</h2>
+    <p class="sub">ממשק ניהול וטיפול בקריאות</p>
+    <div class="card">
+    <label>סיסמה<input type="password" id="lgP" autocomplete="current-password" required></label>
     <label>השם שלך <span class="hint">יופיע ביומן הטיפול</span><input id="lgN" value="${esc(me())}" autocomplete="name"></label>
-    <p class="late" id="lgE" role="alert">${noPw?'מנהל המערכת עוד לא הגדיר סיסמה (APP_PASSWORD). ראו README.':pw()?'הסיסמה שגויה':''}</p><button class="pri big" style="width:100%">כניסה</button></form>`;
+    <p class="late" id="lgE" role="alert">${noPw?'מנהל המערכת עוד לא הגדיר סיסמה (APP_PASSWORD). ראו README.':pw()?'הסיסמה שגויה':''}</p>
+    <button class="pri big" style="width:100%">כניסה</button></div></form>`;
   document.body.append(d);$('lgP').focus();
   d.querySelector('form').onsubmit=e=>{e.preventDefault();ls('k4u_pw',$('lgP').value);if($('lgN').value.trim())ls('agent',$('lgN').value.trim());d.remove();first=true;since=0;pull()};
 }
@@ -428,11 +490,38 @@ function people(){
     return `<button class="cc" data-c="${esc(c.id)}"><b>${esc(c.name)}</b>${c.company?esc(c.company)+'<br>':''}<span class="num">${esc(c.phone)}</span><br><small>${T.length} קריאות · ${o} פתוחות</small></button>`}).join('')||'<div class="empty">אין מדווחים עדיין</div>';
 }
 const tOpts=(v,all='כל הנושאים')=>`<option value="">${all}</option>`+TOP.map(t=>`<option value="${t.k}"${t.k===v?' selected':''}>${t.n}</option>`).join('');
+function members(){
+  const q=$('mq').value.trim().toLowerCase();
+  const M=S.members.filter(m=>!q||[m.first,m.last,m.unit,m.phone].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.active===false)-(b.active===false)||String(a.last).localeCompare(b.last,'he')||String(a.first).localeCompare(b.first,'he'));
+  $('mTable').innerHTML=`<p class="note">${S.members.filter(m=>m.active!==false).length} מורשים פעילים מתוך ${S.members.length}</p>`+(M.length?`<div class="scroll"><table class="stack mlist"><thead><tr><th>שם</th><th>יחידה / מחלקה</th><th>טלפון</th><th>סטטוס</th><th>כניסה אחרונה</th><th>פעולות</th></tr></thead><tbody>${M.map(m=>`<tr class="${m.active===false?'off':''}"><td><b>${esc(m.first)} ${esc(m.last)}</b></td><td>${esc(m.unit)}</td><td class="num">${esc(m.phone)}</td><td><span class="pill${m.active===false?' no':''}">${m.active===false?'מושבת':'פעיל'}</span></td><td class="num">${m.lastLogin?fmt(m.lastLogin):'—'}</td><td><button data-m="${esc(m.id)}">עריכה</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">עדיין אין מורשים. הוסיפו את הראשון בכפתור "הוספת מורשה".</div>');
+}
+function member(id){
+  const m=id?S.members.find(x=>x.id===id):null;openId=null;
+  openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">${m?'עריכת מורשה':'הוספת מורשה'}</h2><button data-x>סגירה ✕</button></div>
+  <form id="fM" novalidate><div class="grid2">
+  <label>שם פרטי <span class="rq" aria-hidden="true">*</span><input name="first" value="${esc(m?.first)}" autocomplete="off"></label>
+  <label>שם משפחה <span class="rq" aria-hidden="true">*</span><input name="last" value="${esc(m?.last)}" autocomplete="off"></label>
+  <label>4 ספרות אחרונות של מס׳ אישי ${m?'<span class="hint">השאירו ריק כדי לא לשנות</span>':'<span class="rq" aria-hidden="true">*</span>'}<input name="digits" inputmode="numeric" maxlength="4" pattern="\\d{4}" autocomplete="off" dir="ltr"></label>
+  <label>טלפון<input name="phone" type="tel" inputmode="tel" value="${esc(m?.phone)}"></label>
+  <label>יחידה / מחלקה<input name="unit" value="${esc(m?.unit)}"></label>
+  ${m?`<label>סטטוס<select name="active"><option value="1"${m.active!==false?' selected':''}>פעיל: יכול לדווח</option><option value="0"${m.active===false?' selected':''}>מושבת: לא יכול להיכנס</option></select></label>`:''}
+  </div><p id="mErr" class="late" role="alert"></p>
+  <div class="row"><button class="pri big">${m?'שמירה':'הוספה לרשימה'}</button>${m?'<button type="button" class="dng" id="dM">מחיקה מהרשימה</button>':''}</div>
+  ${m?`<p class="note">נוסף: ${fmt(m.created)}${m.by?' · ע״י '+esc(m.by):''} · כניסה אחרונה: ${m.lastLogin?fmt(m.lastLogin):'—'}</p>`:''}</form>`);
+  const f=$('fM');
+  f.onsubmit=async e=>{e.preventDefault();const g=n=>(f[n]?.value||'').trim(),d={first:g('first'),last:g('last'),digits:g('digits'),phone:g('phone'),unit:g('unit'),active:f.active?f.active.value==='1':true};
+    if(!d.first||!d.last){$('mErr').textContent='חסר שם פרטי או שם משפחה';return}
+    if(d.digits&&!/^\d{4}$/.test(d.digits)||(!m&&!d.digits)){$('mErr').textContent='יש להזין בדיוק 4 ספרות';f.digits.focus();return}
+    const btn=f.querySelector('.pri');btn.disabled=true;
+    try{const r=await call('apiMemberPut',m?m.id:'m'+uid(),d,me());if(r&&r.auth===false){login(r.setup);return}toast(m?'הפרטים נשמרו':`${d.first} ${d.last} נוסף לרשימת המורשים`);closeD();since=0;pull()}
+    catch(err){btn.disabled=false;$('mErr').textContent=String(err&&err.message||'השמירה נכשלה')}};
+  if(m)$('dM').onclick=e=>{if(e.target.dataset.sure){del('members',m.id);closeD();toast('נמחק מהרשימה')}else{e.target.dataset.sure=1;e.target.textContent='לחצו שוב לאישור המחיקה'}};
+}
 function render(){
   kpis();
   const as=[...new Set(S.tickets.map(t=>t.assignee).filter(Boolean))].sort(),a=$('bAs').value;
   $('bAs').innerHTML='<option value="">כל הנציגים</option>'+as.map(x=>`<option${x===a?' selected':''}>${esc(x)}</option>`).join('');
-  ({report:tiles,board,tickets:table,stats,people})[view]();
+  ({report:tiles,board,tickets:table,stats,people,members})[view]();
   if(openId&&openId.startsWith('t:')&&$('drawer').classList.contains('on')&&!$('drawer').contains(document.activeElement))ticket(openId.slice(2),1);
 }
 
@@ -450,6 +539,7 @@ function done(num,T,sub){
   <div class="row" style="justify-content:center"><button class="pri big" data-x>חזרה לדף הראשי</button></div>`,1);
 }
 function newTicket(k){
+  if(PUB&&!mtok())return memberLogin();
   openId=null;
   const td=new Date();td.setMinutes(td.getMinutes()-td.getTimezoneOffset());const minD=td.toISOString().slice(0,10);
   const R='<span class="rq" aria-hidden="true">*</span>';
@@ -471,7 +561,7 @@ function newTicket(k){
     <div><span class="lbl" id="uL">דחיפות</span><div class="opts u" role="radiogroup" aria-labelledby="uL">${PR.map((p,i)=>`<label class="opt"><input type="radio" name="priority" value="${i}"${i===1?' checked':''}>${p}</label>`).join('')}</div></div>
   </fieldset>
   <fieldset id="fsRep" hidden><legend>מי מדווח?</legend>
-  <div class="grid2"><label>שם המדווח ${R}<input name="rName" ${PUB?'':'list="ppl"'} autocomplete="name"></label><label>טלפון לחזרה ${R}<input name="rPhone" type="tel" inputmode="tel" autocomplete="tel"></label>
+  <div class="grid2">${PUB?`<div><span class="lbl">מדווח</span><b style="display:flex;align-items:center;min-height:52px;font-size:1.1rem">${esc(MEM?(MEM.first+' '+MEM.last):'')}</b><input type="hidden" name="rName" value="${esc(MEM?(MEM.first+' '+MEM.last):'')}"></div>`:`<label>שם המדווח ${R}<input name="rName" list="ppl" autocomplete="name"></label>`}<label>טלפון לחזרה ${R}<input name="rPhone" type="tel" inputmode="tel" autocomplete="tel"></label>
   <label>יחידה / מחלקה<input name="rUnit" autocomplete="organization"></label>${PUB?'':`<label>התקבל דרך<select name="channel">${opts(CH,0)}</select></label>`}</div>
   ${PUB?'':`<label>נציג מטפל<input name="assignee" value="${esc(me())}"></label>
   <datalist id="ppl">${S.customers.map(c=>`<option value="${esc(c.name)}">${esc(c.phone)}</option>`).join('')}</datalist>`}</fieldset>
@@ -493,7 +583,14 @@ function newTicket(k){
     if(n==='topic'||n==='sub'||n==='site')sync()});
   $('bFind').addEventListener('input',e=>{const q=e.target.value.trim();$('bldgs').querySelectorAll('.opt').forEach(o=>o.hidden=!!q&&!o.textContent.includes(q))});
   if(!PUB)f.rName.addEventListener('change',()=>{const c=S.customers.find(c=>c.name===f.rName.value.trim());if(c){f.rPhone.value||=c.phone||'';f.rUnit.value||=c.company||''}});
-  if(PUB){try{const m=JSON.parse(ls('rep')||'{}');if(m.n)f.rName.value=m.n;if(m.p)f.rPhone.value=m.p;if(m.u)f.rUnit.value=m.u}catch(e){}}
+  if(PUB){try{const m=JSON.parse(ls('rep')||'{}'),prev=m.p||MEM?.phone||'';f.rUnit.value=m.u||MEM?.unit||'';
+    // the phone is never filled in by itself: the reporter types it, or taps to reuse a previous number
+    f.rPhone.required=true;f.rPhone.placeholder='050-1234567';f.rPhone.dir='ltr';f.rPhone.maxLength=12;
+    // live format: 05X-XXXXXXX
+    f.rPhone.addEventListener('input',e=>{const el=e.target,dg=el.value.replace(/\D/g,'').slice(0,10);el.value=/^0[57]/.test(dg)&&dg.length>3?dg.slice(0,3)+'-'+dg.slice(3):/^0[2-46-9]/.test(dg)&&dg.length>2?dg.slice(0,2)+'-'+dg.slice(2):dg;el.removeAttribute('aria-invalid')});
+    const lb=f.rPhone.closest('label');lb.insertAdjacentHTML('beforeend','<span class="hint" style="color:var(--ink);font-weight:500">חובה. בטלפון הזה הצוות יתאם איתך הגעה</span>');
+    if(prev){lb.insertAdjacentHTML('afterend',`<button type="button" class="btn" id="usePrev" style="min-height:44px;margin:-4px 0 12px;font-size:.95rem">השתמש במספר הקודם: <b dir="ltr">${esc(prev)}</b></button>`);
+      $('usePrev').onclick=()=>{f.rPhone.value=prev;$('usePrev').remove();f.rPhone.focus()}}}catch(e){}}
   if(k){$('subs').innerHTML=subRadios(k);sync()}
   f.onsubmit=async e=>{e.preventDefault();
     const k=val('topic'),T=TK[k],ev=!!T?.ev,sub=val('sub'),out=ev&&sub===OUT,loc=!$('fsLoc').hidden;
@@ -508,11 +605,13 @@ function newTicket(k){
     $('fErr').textContent='';
     const d=Object.fromEntries(['rName','rPhone','rUnit','channel','assignee','title','desc','location','evDate','slot','site','bldg','priority'].map(n=>[n,val(n)]));
     if(PUB){
-      if(d.rPhone.replace(/\D/g,'').length<9){$('fErr').textContent='מספר הטלפון קצר מדי';f.rPhone.focus();return}
+      if(!validPhone(d.rPhone)){$('fErr').textContent='יש להזין מספר טלפון תקין לחזרה. בלעדיו לא ניתן לתאם הגעה';f.rPhone.setAttribute('aria-invalid','true');f.rPhone.focus();f.rPhone.scrollIntoView({block:'center'});return}
       const btn=f.querySelector('button.pri');btn.disabled=true;btn.textContent='שולח…';
       try{
+        if(!mtok()){btn.disabled=false;btn.textContent='שליחת הדיווח';memberLogin();return}
         const r=await call('apiReport',{topic:k,sub,title:d.title,desc:d.desc,priority:+d.priority,site:loc?d.site:'',bldg:loc?d.bldg:'',location:loc?d.location:'',evDate:ev?d.evDate:'',slot:ev?d.slot:'',rName:d.rName,rPhone:d.rPhone,rUnit:d.rUnit});
-        ls('rep',JSON.stringify({n:d.rName,p:d.rPhone,u:d.rUnit}));
+        if(r&&r.auth===false){btn.disabled=false;btn.textContent='שליחת הדיווח';ls('k4u_mt','');MEM=null;memberLogin('expired');return}
+        ls('rep',JSON.stringify({p:d.rPhone,u:d.rUnit}));
         done(r.num,T,sub);
       }catch(e){btn.disabled=false;btn.textContent='שליחת הדיווח';const m=String(e&&e.message||'');
         $('fErr').textContent=/unknown function/i.test(m)?'השרת עוד לא עודכן לגרסה החדשה. יש לבצע פריסה חדשה ב־Apps Script.'
@@ -538,6 +637,8 @@ function ticket(id,keep){
   <div class="m"><span class="tag p${t.priority}">${PR[t.priority]}</span>${left(t)}<span>יעד: ${fmt(t.due)}</span><span>נפתחה: ${fmt(t.created)}</span></div>
   <p>📍 <b>${esc(where(t))||esc(t.sub)||'—'}</b>${t.eventAt?`<br>🗓 מועד האירוע: <b>${when(t)}</b>${tp(t).sz?' · '+tp(t).sz:''}`:''}<br>מדווח: <button class="btn" data-c="${esc(c.id||'')}" style="min-height:40px;padding:0 12px">${esc(t.custName)}</button> <span class="num">${esc(c.phone||'')}</span>${c.company?' · '+esc(c.company):''}</p>
   ${t.desc?`<p style="white-space:pre-wrap">${esc(t.desc)}</p>`:''}
+  <div class="row" style="margin:0 0 14px"><button type="button" id="editT">✎ עריכת פרטי התקלה</button></div>
+  ${t.orig?`<details class="srow" style="margin-bottom:14px"><summary style="display:block;min-height:0"><b>הדיווח המקורי</b> <small class="hint" style="display:inline">(לפני תיקון בשטח)</small></summary><p style="margin:8px 0 0">${esc(TK[t.orig.topic]?.n||t.orig.topic)} · ${esc(t.orig.sub)}<br>📍 ${esc(where(t.orig))||'—'}${t.orig.eventAt?'<br>🗓 '+when(t.orig):''}<br>${esc(t.orig.title)}${t.orig.desc?'<br><span style="white-space:pre-wrap">'+esc(t.orig.desc)+'</span>':''}</p></details>`:''}
   <div role="group" aria-labelledby="stL"><span id="stL" style="font-weight:500">סטטוס</span><div class="sts">${ST.map((s,i)=>`<button data-st="${i}" aria-pressed="${t.status===i}">${s}</button>`).join('')}</div></div>
   <div class="grid2"><label>נושא<select id="eTp">${tOpts(t.topic,'בחרו')}</select></label><label>תת־נושא<select id="eSb">${(T.s||[]).map(s=>`<option${s===t.sub?' selected':''}>${esc(s)}</option>`).join('')}</select></label>
   <label>דחיפות<select id="ePr">${opts(PR,t.priority)}</select></label><label>נציג מטפל<input id="eAs" value="${esc(t.assignee)}"></label></div>
@@ -554,9 +655,47 @@ function ticket(id,keep){
   $('eAs').onchange=e=>{const a=e.target.value.trim();upd({assignee:a},a?`הועברה לטיפול ${a}`:'הוסר נציג מטפל')};
   $('fL').onsubmit=async e=>{e.preventDefault();const f=e.target;if(!f.text.value.trim())return f.text.focus();const by=f.by.value.trim()||'נציג',at=now();ls('agent',by);
     if(await save('tickets',t.id,{...t,updated:at,log:[...(t.log||[]),{at,by,text:f.text.value.trim()}]}))toast('העדכון נוסף ליומן')};
+  $('editT').onclick=()=>editTicket(t.id);
   $('dT').onclick=e=>{if(e.target.dataset.sure){del('tickets',t.id);closeD();toast('הקריאה נמחקה')}else{e.target.dataset.sure=1;e.target.textContent='לחצו שוב לאישור המחיקה'}};
 }
 
+function editTicket(id){
+  const t=S.tickets.find(x=>x.id===id);if(!t)return;openId=null;
+  const td=t.eventAt?new Date(t.eventAt-new Date(t.eventAt).getTimezoneOffset()*6e4).toISOString().slice(0,10):'';
+  const sel=(id,arr,v,lab)=>`<select id="${id}">${lab?`<option value="">${lab}</option>`:''}${arr.map(x=>`<option${x===v?' selected':''}>${esc(x)}</option>`).join('')}</select>`;
+  openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">עריכת פרטי קריאה #${esc(t.num)}</h2><button data-x>סגירה ✕</button></div>
+  <p class="note">מתקנים כאן מה שהתגלה בשטח. כל שינוי נרשם ביומן הטיפול, והדיווח המקורי נשמר.</p>
+  <form id="fE" novalidate>
+  <div class="grid2"><label>נושא<select id="xTp">${TOP.map(x=>`<option value="${x.k}"${x.k===t.topic?' selected':''}>${esc(x.n)}</option>`).join('')}</select></label>
+  <label>תת־נושא<span id="xSbW"></span></label></div>
+  <div id="xEv" class="grid2"><label>תאריך האירוע<input type="date" id="xDate" value="${td}"></label><label>חלק היום${sel('xSlot',Object.keys(SLOT),t.slot||'בוקר')}</label></div>
+  <div class="grid2"><label>מתחם${sel('xSite',Object.keys(SITES),t.site||'','ללא מתחם')}</label><label>מבנה<span id="xBW"></span></label></div>
+  <label>פירוט מיקום<input id="xLoc" value="${esc(t.location)}"></label>
+  <label>תיאור קצר<input id="xTitle" maxlength="120" value="${esc(t.title)}"></label>
+  <label>פירוט<textarea id="xDesc">${esc(t.desc)}</textarea></label>
+  <label>מה התגלה בשטח? <span class="rq" aria-hidden="true">*</span><span class="hint">ההסבר יירשם ביומן הטיפול</span><textarea id="xWhy" required placeholder="לדוגמה: התקלה לא ברמקול אלא במגבר בחדר החשמל"></textarea></label>
+  <p id="xErr" class="late" role="alert"></p>
+  <div class="row"><button class="pri big">שמירת התיקון</button><button type="button" class="big" id="xBack">חזרה לקריאה</button></div></form>`);
+  const subs=()=>{const k=$('xTp').value;$('xSbW').innerHTML=sel('xSb',TK[k].s,TK[k].s.includes(t.sub)?t.sub:TK[k].s[0]);$('xEv').hidden=!TK[k].ev};
+  const bl=()=>{const si=$('xSite').value;$('xBW').innerHTML=si?sel('xB',SITES[si],t.bldg,'בחרו מבנה'):'<select id="xB" disabled><option value="">—</option></select>'};
+  $('xTp').onchange=subs;$('xSite').onchange=bl;subs();bl();
+  $('xBack').onclick=()=>ticket(t.id);
+  $('fE').onsubmit=async e=>{e.preventDefault();
+    const why=$('xWhy').value.trim();if(!why){$('xErr').textContent='כתבו בקצרה מה התגלה בשטח';$('xWhy').focus();return}
+    const k=$('xTp').value,ev=!!TK[k].ev,n={topic:k,sub:$('xSb').value,site:$('xSite').value,bldg:$('xSite').value?$('xB').value:'',location:$('xLoc').value.trim(),title:($('xTitle').value.trim()===t.title&&t.title===t.sub)?$('xSb').value:($('xTitle').value.trim()||$('xSb').value),desc:$('xDesc').value.trim(),
+      slot:ev?$('xSlot').value:'',eventAt:ev&&$('xDate').value?new Date(`${$('xDate').value}T${String(SLOT[$('xSlot').value]).padStart(2,'0')}:00`).getTime():0};
+    if(ev&&!n.eventAt){$('xErr').textContent='בקריאת אירוע חובה תאריך';return}
+    if(!ev&&n.site&&!n.bldg){$('xErr').textContent='בחרו מבנה';return}
+    const L={topic:'נושא',sub:'תת־נושא',site:'מתחם',bldg:'מבנה',location:'פירוט מיקום',title:'תיאור',desc:'פירוט',eventAt:'מועד אירוע',slot:'חלק היום'};
+    const show=(f,v)=>f==='topic'?(TK[v]?.n||v):f==='eventAt'?(v?fmt(v):'—'):(v||'—');
+    const diffs=Object.keys(L).filter(f=>String(n[f]??'')!==String(t[f]??'')).map(f=>f==='desc'?'פירוט עודכן':`${L[f]}: ${show(f,t[f])} ← ${show(f,n[f])}`);
+    if(!diffs.length){$('xErr').textContent='לא שונה אף פרט';return}
+    const at=now(),orig=t.orig||{topic:t.topic,sub:t.sub,site:t.site,bldg:t.bldg,location:t.location,title:t.title,desc:t.desc,eventAt:t.eventAt,slot:t.slot};
+    const due=ev?n.eventAt:(TK[t.topic]?.ev?t.created+SLA_H[t.priority]*H:t.due);
+    const by=me()||t.assignee||'צוות';
+    if(await save('tickets',t.id,{...t,...n,due,orig,updated:at,log:[...(t.log||[]),{at,by,sys:1,text:'תוקנו פרטי התקלה: '+diffs.join(' · ')},{at,by,text:'מה התגלה בשטח: '+why}]})){toast('פרטי הקריאה עודכנו');ticket(t.id)}
+  };
+}
 function person(id){
   const c=id?cust(id):null;openId='c:';const T=c?S.tickets.filter(t=>t.custId===c.id).sort((a,b)=>b.created-a.created):[];
   openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">${c?esc(c.name):'מדווח חדש'}</h2><button data-x>סגירה ✕</button></div>
@@ -575,17 +714,19 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-x]')||e.target===$('veil'))return closeD();
   const n=e.target.closest('[data-new]');if(n)return newTicket(n.dataset.new);
   const tk=e.target.closest('[data-t]');if(tk)return ticket(tk.dataset.t);
+  const mm=e.target.closest('[data-m]');if(mm)return member(mm.dataset.m);
   const cc=e.target.closest('[data-c]');if(cc&&cc.dataset.c)return person(cc.dataset.c);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('drawer').classList.contains('on'))closeD()});
 $('newC').onclick=()=>person(null);
+$('newM').onclick=()=>member(null);
 $('bTp').innerHTML=tOpts('');$('tTp').innerHTML=tOpts('');$('tSt').innerHTML='<option value="">כל הסטטוסים</option>'+opts(ST,-1);
 const fillSub=()=>{const k=$('tTp').value;$('tSb').innerHTML='<option value="">כל תתי־הנושא</option>'+(TK[k]?.s||[]).map(s=>`<option>${esc(s)}</option>`).join('');$('tSb').disabled=!k};
 $('tTp').addEventListener('change',fillSub);fillSub();
 $('tSite').innerHTML+=Object.keys(SITES).map(x=>`<option value="${esc(x)}">${x==='108'?'מתחם 108':esc(x)}</option>`).join('');
 document.documentElement.style.setProperty('--stripe','linear-gradient(90deg,'+TOP.map((t,i)=>`${t.c} ${(i/TOP.length*100).toFixed(2)}% ${((i+1)/TOP.length*100).toFixed(2)}%`).join(',')+')');
-['bq','bAs','bTp','tq','tTp','tSb','tSt','tSite','tSort','cq','sPer'].forEach(i=>$(i).addEventListener('input',render));
-const V=['report','board','tickets','stats','people'];
+['bq','bAs','bTp','tq','tTp','tSb','tSt','tSite','tSort','cq','sPer','mq'].forEach(i=>$(i).addEventListener('input',render));
+const V=['report','board','tickets','stats','people','members'];
 function route(){view=!PUB&&V.includes(location.hash.slice(1))?location.hash.slice(1):'report';
   for(const v of V){$('v-'+v).hidden=v!==view;v===view?$('n-'+v).setAttribute('aria-current','page'):$('n-'+v).removeAttribute('aria-current')}render()}
 addEventListener('hashchange',()=>{route();$('main').focus()});route();
@@ -609,7 +750,7 @@ const isMobile=isIOS||/Android|Mobile/i.test(navigator.userAgent);
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function installSheet(force){
   if($('a2hs')||standalone())return;
-  if(!force&&($('loginDlg')||$('drawer').classList.contains('on')||document.documentElement.classList.contains('splash'))){setTimeout(()=>installSheet(),4000);return}
+  if(!force&&($('loginDlg')||$('mLogin')||$('drawer').classList.contains('on')||document.documentElement.classList.contains('splash'))){setTimeout(()=>installSheet(),4000);return}
   const bip=window.__bip,icon=(PUB?'':'../')+'icons/icon-192.png',name=PUB?'קשר והגברה':'צוות K4U';
   const shareIc='<svg class="ic-inline" aria-label="שיתוף" role="img" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1d6a86" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5"/><path d="M5 11v9h14v-9"/></svg>';
   const how=bip?'<p style="margin:0 0 6px">התקינו את הקיצור, והמערכת תיפתח מהמסך הראשי כמו אפליקציה, בלחיצה אחת.</p>'
@@ -659,6 +800,9 @@ setTimeout(()=>window.k4uReady&&window.k4uReady(),50);
 $('expBtn').onclick=exportCSV;
 if(window.API_URL){$('shareBtn').hidden=false;$('shareLbl').textContent=PUB?'שתף קישור':'שתף קישור לדיווח';$('shareBtn').onclick=shareLink}
 if(PUB){document.documentElement.classList.add('pub');first=false;$('status').textContent='';
+  $('logoutBtn').onclick=()=>{ls('k4u_mt','');ls('k4u_mem','');MEM=null;showWho();toast('יצאת מהמערכת');memberLogin()};
+  if(mtok()){showWho();call('apiMe').then(r=>{if(r&&r.ok){MEM=r.member;ls('k4u_mem',JSON.stringify(MEM));showWho()}else{ls('k4u_mt','');ls('k4u_mem','');MEM=null;showWho();memberLogin('expired')}}).catch(()=>{})}
+  else setTimeout(()=>memberLogin(),document.documentElement.classList.contains('splash')?2600:200);
   $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ודיווח תקלות קשר</span><span style="display:flex;gap:18px">'+(isMobile&&!standalone()?'<a href="#" id="a2hsLink">הוספה למסך הבית</a>':'')+'<a href="tech/">כניסת צוות</a></span>';render()}
 else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
 maybeInstall();
