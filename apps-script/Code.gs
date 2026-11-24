@@ -10,14 +10,17 @@
  * הפעלה ראשונה: בוחרים את הפונקציה setup ולוחצים Run (ראו README).
  */
 
-var SHEETS = { tickets: 'קריאות', customers: 'מדווחים', audit: 'יומן שינויים' };
+var SHEETS = { tickets: 'קריאות', customers: 'מדווחים', members: 'מורשים', audit: 'יומן שינויים' };
 var COLS = {
   tickets: ['מס׳ קריאה', 'נושא', 'תת־נושא', 'מתחם', 'מבנה', 'פירוט מיקום', 'מועד אירוע', 'בוקר/ערב',
             'תיאור קצר', 'פירוט', 'סטטוס', 'דחיפות', 'נציג מטפל', 'מדווח', 'התקבל דרך',
             'נפתחה', 'עודכנה', 'יעד', 'נסגרה', 'זמן טיפול (שעות)', 'יומן טיפול'],
   customers: ['שם', 'טלפון', 'יחידה / מחלקה', 'מייל', 'הערות'],
+  members: ['שם פרטי', 'שם משפחה', 'יחידה / מחלקה', 'טלפון', 'פעיל', 'נוסף', 'נוסף ע״י', 'כניסה אחרונה'],
 };
-var DATE_COLS = { tickets: ['מועד אירוע', 'נפתחה', 'עודכנה', 'יעד', 'נסגרה'], customers: [] };
+var DATE_COLS = { tickets: ['מועד אירוע', 'נפתחה', 'עודכנה', 'יעד', 'נסגרה'], customers: [], members: ['נוסף', 'כניסה אחרונה'] };
+var MEMBER_DAYS = 30;            // כמה ימים מדווח נשאר מחובר בטלפון
+var LOGIN_FAILS = 5;             // ניסיונות שגויים לפני נעילה זמנית של 15 דקות
 var AUDIT_COLS = ['מועד', 'פעולה', 'סוג', 'מס׳ קריאה', 'מזהה', 'בוצע ע״י', 'סטטוס', 'נתונים (JSON)'];
 var TECH = ['id', 'updated', 'deleted', 'json'];          // עמודות טכניות — מוסתרות, לא לערוך ידנית
 var ST = ['חדשה', 'בטיפול', 'ממתינה למדווח', 'סגורה'];
@@ -48,7 +51,7 @@ function doPost(e) {
   var out;
   try {
     var req = JSON.parse(e.postData.contents);
-    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel, apiReport: apiReport };
+    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel, apiReport: apiReport, apiLogin: apiLogin, apiMe: apiMe, apiMemberPut: apiMemberPut };
     if (!fns.hasOwnProperty(req.fn)) throw new Error('unknown function');
     out = { ok: true, result: fns[req.fn].apply(null, Array.isArray(req.args) ? req.args : []) };
   } catch (err) {
@@ -73,7 +76,8 @@ function setup() {
   }
   props.setProperty('SHEET_ID', ss.getId());
   ss.setSpreadsheetTimeZone(TZ);
-  ['tickets', 'customers'].forEach(function (col) { ensureSheet_(ss, col); });
+  ['tickets', 'customers', 'members'].forEach(function (col) { ensureSheet_(ss, col); });
+  secret_();
   ensureAudit_(ss);
   // מוחקים את הגיליון הריק שנוצר עם הקובץ
   ss.getSheets().forEach(function (sh) {
@@ -163,6 +167,7 @@ function ver_() {
 }
 function readable_(col, d) {
   if (col === 'customers') return [txt_(d.name), txt_(d.phone), txt_(d.company), txt_(d.email), txt_(d.notes)];
+  if (col === 'members') return [txt_(d.first), txt_(d.last), txt_(d.unit), txt_(d.phone), d.active === false ? 'לא' : 'כן', date_(d.created), txt_(d.by), date_(d.lastLogin)];
   var log = (d.log || []).map(function (l) { return fmt_(l.at) + ' · ' + (l.by || '') + ': ' + (l.text || ''); }).join('\n');
   return [
     Number(d.num) || '', txt_(topicName_(d.topic)), txt_(d.sub), txt_(d.site), txt_(d.bldg), txt_(d.location),
@@ -203,7 +208,7 @@ function apiSync(token, since) {
   since = Number(since) || 0;
   if (since && ver_() < since - OVERLAP_MS) return { now: now, docs: [] };   // אין שינויים — בלי לקרוא את הגיליון
   var docs = [];
-  ['tickets', 'customers'].forEach(function (col) {
+  ['tickets', 'customers', 'members'].forEach(function (col) {
     var sh = sheet_(col), last = sh.getLastRow();
     if (last < 2) return;
     var base = COLS[col].length + 1;
@@ -214,6 +219,7 @@ function apiSync(token, since) {
       if (since ? upd > since - OVERLAP_MS : !del) {
         var data;
         if (!del) { try { data = JSON.parse(r[3]); } catch (e) { return; } }
+        if (data && col === 'members') { delete data.hash; data.hasCode = true; }
         docs.push({ col: col, id: id, deleted: del, data: data });
       }
     });
@@ -226,6 +232,7 @@ function apiSync(token, since) {
 function apiPut(token, col, id, data, actor) {
   if (!authOk_(token)) return denied_();
   check_(col, id);
+  if (col === 'members') throw new Error('use apiMemberPut');
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('נתונים לא תקינים');
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -256,6 +263,8 @@ function put_(col, id, data, actor) {
 /* ------------------------------------------------------------------ */
 function apiReport(token, r) {
   if (!PropertiesService.getScriptProperties().getProperty('APP_PASSWORD')) throw new Error('המערכת עוד לא הוגדרה');
+  var M = memberFromToken_(token);
+  if (!M) return { auth: false, member: true };
   if (!r || typeof r !== 'object') throw new Error('נתונים לא תקינים');
   var str = function (v, max) { return String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max); };
   var T = null;
@@ -277,8 +286,10 @@ function apiReport(token, r) {
     eventAt = Utilities.parseDate(p[0] + '-' + p[1] + '-' + p[2] + ' ' + ('0' + SLOT[slot]).slice(-2) + ':00', TZ, 'yyyy-MM-dd HH:mm').getTime();
     if (eventAt < Date.now() - 864e5) throw new Error('תאריך האירוע עבר');
   }
-  var name = str(r.rName, 80), phone = str(r.rPhone, 30), unit = str(r.rUnit, 80);
-  if (!name || phone.replace(/\D/g, '').length < 9) throw new Error('חסרים פרטי מדווח');
+  var name = (M.data.first + ' ' + M.data.last).trim(), phone = str(r.rPhone, 30), unit = str(r.rUnit, 80) || M.data.unit || '';
+  // טלפון לחזרה הוא חובה בכל דיווח — לתיאום הגעה. לא נלקח אוטומטית מהרשימה.
+  if (!validPhone_(phone)) throw new Error('יש להזין טלפון תקין לחזרה (לתיאום הגעה)');
+  phone = fmtPhone_(phone);
   var pri = Number(r.priority); if (!(pri >= 0 && pri <= 3)) pri = 1; pri = Math.floor(pri);
 
   // הגנה מהצפה: מונה גלובלי לחלון של 10 דקות
@@ -291,13 +302,13 @@ function apiReport(token, r) {
     cache.put(win, String(cnt + 1), 900);
 
     // מדווח: לפי טלפון, אחרת חדש
-    var csh = sheet_('customers'), cid = '', dig = phone.replace(/\D/g, '');
+    var csh = sheet_('customers'), cid = '', dig = phoneDigits_(phone);
     var last = csh.getLastRow();
     if (last >= 2) {
       var rows = csh.getRange(2, COLS.customers.length + 1, last - 1, TECH.length).getValues();
       for (var j = 0; j < rows.length && !cid; j++) {
         if (rows[j][2] === true) continue;
-        try { var cd = JSON.parse(rows[j][3]); if (String(cd.phone || '').replace(/\D/g, '') === dig) cid = String(rows[j][0]); } catch (e) {}
+        try { var cd = JSON.parse(rows[j][3]); if (phoneDigits_(cd.phone) === dig) cid = String(rows[j][0]); } catch (e) {}
       }
     }
     var now = Date.now();
@@ -311,7 +322,7 @@ function apiReport(token, r) {
     put_('tickets', id, {
       num: num, topic: T.k, sub: sub, title: str(r.title, 120) || (ev ? T.n + ' · ' + sub : sub),
       site: site, bldg: ev && !out ? '' : bldg, location: str(r.location, 200), eventAt: eventAt, slot: slot,
-      custId: cid, custName: name, channel: 5, priority: pri, status: 0, assignee: '', desc: str(r.desc, 3000),
+      custId: cid, custName: name, memberId: M.id, channel: 5, priority: pri, status: 0, assignee: '', desc: str(r.desc, 3000),
       created: now, updated: now, due: ev ? eventAt : now + [168, 72, 24, 4][pri] * 36e5, closed: 0,
       log: [{ at: now, by: name, sys: 1, text: 'הקריאה נפתחה בדף הדיווח' }],
     }, name + ' (דף הדיווח)');
@@ -359,4 +370,115 @@ function dailyBackup() {
     var f = files.next();
     if (f.getDateCreated().getTime() < cutoff) f.setTrashed(true);
   }
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Authorised reporters ("מורשים"): login with first name, last name   */
+/* and the last 4 digits of the personal number.                       */
+/* The 4 digits are never stored: only an HMAC of them, keyed by a     */
+/* secret kept in Script Properties.                                   */
+/* ------------------------------------------------------------------ */
+function secret_() {
+  var p = PropertiesService.getScriptProperties(), s = p.getProperty('AUTH_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); p.setProperty('AUTH_SECRET', s); }
+  return s;
+}
+function b64_(bytes) { return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, ''); }
+function hmac_(text) { return b64_(Utilities.computeHmacSha256Signature(text, secret_())); }
+function normName_(v) {
+  return String(v || '').replace(/["'׳״`]/g, '').replace(/[-‐-―־]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function codeHash_(first, last, digits) { return hmac_('code|' + normName_(first) + '|' + normName_(last) + '|' + digits); }
+function members_() {
+  var sh = sheet_('members'), last = sh.getLastRow(), out = [];
+  if (last < 2) return out;
+  sh.getRange(2, COLS.members.length + 1, last - 1, TECH.length).getValues().forEach(function (r) {
+    if (r[2] === true || r[2] === 'TRUE') return;
+    try { out.push({ id: String(r[0]), data: JSON.parse(r[3]) }); } catch (e) {}
+  });
+  return out;
+}
+function memberFromToken_(token) {
+  var t = String(token || '').split('.');
+  if (t.length !== 3 || !/^[\w-]{1,128}$/.test(t[0]) || !(Number(t[1]) > Date.now())) return null;
+  if (hmac_('tok|' + t[0] + '|' + t[1]) !== t[2]) return null;
+  var all = members_();
+  for (var i = 0; i < all.length; i++) if (all[i].id === t[0] && all[i].data.active !== false) return all[i];
+  return null;
+}
+function publicMember_(m) { return { first: m.data.first, last: m.data.last, unit: m.data.unit || '', phone: m.data.phone || '' }; }
+
+function apiLogin(_, r) {
+  if (!r || typeof r !== 'object') throw new Error('נתונים לא תקינים');
+  var first = String(r.first || '').slice(0, 40), last = String(r.last || '').slice(0, 40), digits = String(r.digits || '');
+  if (!normName_(first) || !normName_(last) || !/^\d{4}$/.test(digits)) return { ok: false, reason: 'fields' };
+  var cache = CacheService.getScriptCache(), key = 'lf_' + hmac_('k|' + normName_(first) + '|' + normName_(last)).slice(0, 40);
+  var gkey = 'lg' + Math.floor(Date.now() / 6e5);
+  var fails = Number(cache.get(key) || 0), glob = Number(cache.get(gkey) || 0);
+  if (fails >= LOGIN_FAILS || glob >= 300) return { ok: false, reason: 'locked' };
+  var h = codeHash_(first, last, digits), all = members_(), m = null;
+  for (var i = 0; i < all.length; i++) {
+    var d = all[i].data;
+    if (d.active !== false && d.hash === h && normName_(d.first) === normName_(first) && normName_(d.last) === normName_(last)) { m = all[i]; break; }
+  }
+  if (!m) {
+    cache.put(key, String(fails + 1), 900); cache.put(gkey, String(glob + 1), 900);
+    return { ok: false, reason: fails + 1 >= LOGIN_FAILS ? 'locked' : 'nomatch', left: Math.max(0, LOGIN_FAILS - fails - 1) };
+  }
+  cache.remove(key);
+  var lock = LockService.getScriptLock();
+  if (lock.tryLock(5000)) {
+    try { m.data.lastLogin = Date.now(); put_('members', m.id, m.data, m.data.first + ' ' + m.data.last + ' (כניסה)'); SpreadsheetApp.flush(); bump_(); }
+    catch (e) {} finally { lock.releaseLock(); }
+  }
+  var exp = Date.now() + MEMBER_DAYS * 864e5;
+  return { ok: true, token: m.id + '.' + exp + '.' + hmac_('tok|' + m.id + '|' + exp), member: publicMember_(m) };
+}
+
+function apiMe(token) {
+  var m = memberFromToken_(token);
+  return m ? { ok: true, member: publicMember_(m) } : { ok: false };
+}
+
+// Staff only (site password): add or edit an authorised reporter
+function apiMemberPut(token, id, d, actor) {
+  if (!authOk_(token)) return denied_();
+  check_('members', id);
+  if (!d || typeof d !== 'object') throw new Error('נתונים לא תקינים');
+  var str = function (v, max) { return String(v == null ? '' : v).trim().slice(0, max); };
+  var first = str(d.first, 40), last = str(d.last, 40), digits = str(d.digits, 4);
+  if (!normName_(first) || !normName_(last)) throw new Error('חסר שם פרטי או שם משפחה');
+  if (digits && !/^\d{4}$/.test(digits)) throw new Error('יש להזין בדיוק 4 ספרות');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var all = members_(), old = null;
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].id === id) old = all[i].data;
+      else if (normName_(all[i].data.first) === normName_(first) && normName_(all[i].data.last) === normName_(last)) throw new Error('כבר קיים מורשה בשם הזה');
+    }
+    if (!old && !digits) throw new Error('למורשה חדש יש להזין 4 ספרות');
+    var nameChanged = old && (normName_(old.first) !== normName_(first) || normName_(old.last) !== normName_(last));
+    if (nameChanged && !digits) throw new Error('שינוי שם מחייב להזין שוב את 4 הספרות');
+    var rec = {
+      first: first, last: last, unit: str(d.unit, 80), phone: fmtPhone_(str(d.phone, 30)), active: d.active !== false,
+      hash: digits ? codeHash_(first, last, digits) : old.hash,
+      created: old ? old.created : Date.now(), by: old ? old.by : actor_(actor), lastLogin: old ? old.lastLogin || 0 : 0,
+    };
+    put_('members', id, rec, actor_(actor));
+    SpreadsheetApp.flush(); bump_();
+  } finally { lock.releaseLock(); }
+  return { ok: true };
+}
+
+// מספר טלפון ישראלי: נייד 05X-XXXXXXX, קווי 0X-XXXXXXX, או +972
+function phoneDigits_(p) { return String(p || '').replace(/[\s\-().]/g, '').replace(/^\+972/, '0').replace(/^972/, '0'); }
+function validPhone_(p) { return /^0(5\d{8}|[2-46-9]\d{7}|7\d{8})$/.test(phoneDigits_(p)); }
+// תבנית אחידה: נייד 050-1234567, קווי 02-1234567
+function fmtPhone_(p) {
+  var d = phoneDigits_(p);
+  if (/^0[57]\d{8}$/.test(d)) return d.slice(0, 3) + '-' + d.slice(3);
+  if (/^0[2-46-9]\d{7}$/.test(d)) return d.slice(0, 2) + '-' + d.slice(2);
+  return String(p || '').trim();
 }
