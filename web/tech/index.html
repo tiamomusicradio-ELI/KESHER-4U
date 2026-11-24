@@ -303,6 +303,8 @@ sp.addEventListener('click',finish);setTimeout(function(){if(!shown)finish()},25
     <div class="bar">
       <label class="q">חיפוש<input id="mq" type="search" placeholder="שם, יחידה או טלפון"></label>
       <button class="pri" id="newM">+ הוספת מורשה</button>
+      <button id="impM">⬆ ייבוא מאקסל</button>
+      <button id="tplM">⬇ קובץ דוגמה</button>
     </div>
     <div id="mTable"></div>
   </section>
@@ -503,6 +505,56 @@ function members(){
   const M=S.members.filter(m=>!q||[m.first,m.last,m.unit,m.phone].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.active===false)-(b.active===false)||String(a.last).localeCompare(b.last,'he')||String(a.first).localeCompare(b.first,'he'));
   $('mTable').innerHTML=`<p class="note">${S.members.filter(m=>m.active!==false).length} מורשים פעילים מתוך ${S.members.length}</p>`+(M.length?`<div class="scroll"><table class="stack mlist"><thead><tr><th>שם</th><th>יחידה / מחלקה</th><th>טלפון</th><th>סטטוס</th><th>כניסה אחרונה</th><th>פעולות</th></tr></thead><tbody>${M.map(m=>`<tr class="${m.active===false?'off':''}"><td><b>${esc(m.first)} ${esc(m.last)}</b></td><td>${esc(m.unit)}</td><td class="num">${esc(m.phone)}</td><td><span class="pill${m.active===false?' no':''}">${m.active===false?'מושבת':'פעיל'}</span></td><td class="num">${m.lastLogin?fmt(m.lastLogin):'—'}</td><td><button data-m="${esc(m.id)}">עריכה</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">עדיין אין מורשים. הוסיפו את הראשון בכפתור "הוספת מורשה".</div>');
 }
+/* ---- bulk import of authorised reporters from Excel: first name | last name | 4 digits ---- */
+const normN=v=>String(v||'').replace(/["'׳״`]/g,'').replace(/[-‐-―־]/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+function loadXLSX(){return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=window.XLSX_SRC||'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=()=>res(window.XLSX);sc.onerror=()=>rej(new Error('לא ניתן לטעון את רכיב האקסל — בדקו את החיבור'));document.head.append(sc)})}
+async function memberTemplate(){
+  try{const X=await loadXLSX();const ws=X.utils.aoa_to_sheet([['שם פרטי','שם משפחה','4 ספרות'],['ישראל','ישראלי',{t:'s',v:'0123'}],['רונית','כהן',{t:'s',v:'4567'}]]);
+    ws['!cols']=[{wch:16},{wch:18},{wch:10}];const wb=X.utils.book_new();wb.Workbook={Views:[{RTL:true}]};X.utils.book_append_sheet(wb,ws,'מורשים');X.writeFile(wb,'kesher-4u-members-template.xlsx');
+    toast('קובץ הדוגמה ירד. מוחקים את שורות הדוגמה וממלאים את הרשימה')}catch(e){toast(e.message)}
+}
+function memberImport(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls,.csv';
+  inp.onchange=async()=>{const file=inp.files[0];if(!file)return;
+    try{const X=await loadXLSX(),wb=X.read(await file.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+      const raw=X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}).map(r=>r.map(c=>String(c).trim()));
+      if(!raw.length)return toast('הקובץ ריק');
+      // header row? map columns by their titles, otherwise A, B, C
+      let ci=[0,1,2],start=0;const h=raw[0].map(normN);
+      if(h.some(x=>/שם|פרטי|משפחה|ספר|סיסמ/.test(x))){start=1;const f=k=>h.findIndex(x=>k.test(x));const a=f(/פרטי/),b=f(/משפחה/),c=f(/ספר|סיסמ|קוד|מס/);ci=[a<0?0:a,b<0?1:b,c<0?2:c]}
+      const exist=new Set(S.members.map(m=>normN(m.first)+'|'+normN(m.last))),seen=new Set();
+      const rows=[];raw.slice(start).forEach((r,i)=>{const first=r[ci[0]]||'',last=r[ci[1]]||'',rawD=String(r[ci[2]]||'');if(!first&&!last&&!rawD)return;
+        const clean=rawD.replace(/[\s\-.]/g,''),notNum=/\D/.test(clean);let d=notNum?'':clean,note='';
+        if(d.length>4){d=d.slice(-4);note='נלקחו 4 הספרות האחרונות'}else if(d.length>0&&d.length<4){d=d.padStart(4,'0');note='הושלמו אפסים בהתחלה (אקסל מוחק אותם)'}
+        const key=normN(first)+'|'+normN(last);let st='new',err='';
+        if(!normN(first)||!normN(last)){st='bad';err='חסר שם'}else if(notNum){st='bad';err='הסיסמה צריכה להכיל ספרות בלבד'}else if(d.length!==4){st='bad';err='אין 4 ספרות'}else if(seen.has(key)){st='bad';err='כפול בקובץ'}else if(exist.has(key))st='exists';
+        seen.add(key);rows.push({line:start+i+1,first,last,digits:d,st,err,note})});
+      if(!rows.length)return toast('לא נמצאו שורות בקובץ');
+      importPreview(rows,file.name)}catch(e){toast(e.message||'לא ניתן לקרוא את הקובץ')}};
+  inp.click();
+}
+function importPreview(rows,name){
+  const n=st=>rows.filter(r=>r.st===st).length,lab={new:'<span class="pill">חדש</span>',exists:'<span class="pill" style="background:#e8eef7;color:#34479a">כבר ברשימה</span>',bad:'<span class="pill no">שגוי</span>'};
+  openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">ייבוא מורשים מאקסל</h2><button data-x>סגירה ✕</button></div>
+  <p class="note">${esc(name)} · ${rows.length} שורות</p>
+  <div class="kpis" style="margin:0 0 14px;grid-template-columns:repeat(3,minmax(0,1fr))"><div class="kpi"><b>${n('new')}</b><span>ייתווספו</span></div><div class="kpi"><b>${n('exists')}</b><span>כבר ברשימה</span></div><div class="kpi${n('bad')?' hot':''}"><b>${n('bad')}</b><span>שגויות, לא ייובאו</span></div></div>
+  ${n('exists')?`<label style="display:flex;gap:10px;align-items:center;font-weight:700"><input type="checkbox" id="impUpd" style="width:24px;min-height:24px"> לעדכן 4 ספרות (ולהפעיל מחדש) למי שכבר ברשימה</label>`:''}
+  <div class="scroll" style="max-height:46vh;overflow:auto;margin-bottom:12px"><table class="stack"><thead><tr><th>שורה</th><th>שם פרטי</th><th>שם משפחה</th><th>ספרות</th><th>מצב</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td class="num">${r.line}</td><td>${esc(r.first)}</td><td>${esc(r.last)}</td><td class="num" dir="ltr">${r.digits?'••'+esc(r.digits.slice(-2)):'—'}</td><td>${lab[r.st]}${r.err?' <small class="late">'+esc(r.err)+'</small>':''}${r.note?' <small class="hint" style="display:inline">'+esc(r.note)+'</small>':''}</td></tr>`).join('')}</tbody></table></div>
+  <p id="impMsg" class="late" role="alert"></p>
+  <div class="row"><button class="pri big" id="impGo">ייבוא</button><button type="button" class="big" data-x>ביטול</button></div>`,1);
+  const go=$('impGo'),upd=$('impUpd'),cnt=()=>{const k=n('new')+(upd&&upd.checked?n('exists'):0);go.textContent=k?`ייבוא ${k} מורשים`:'אין מה לייבא';go.disabled=!k};
+  if(upd)upd.onchange=cnt;cnt();
+  go.onclick=async()=>{const u=!!(upd&&upd.checked),send=rows.filter(r=>r.st==='new'||(u&&r.st==='exists')).map(({line,first,last,digits})=>({line,first,last,digits}));
+    go.disabled=true;go.textContent='מייבא…';
+    try{const r=await call('apiMemberImport',send,u,me());if(r&&r.auth===false)return login(r.setup);
+      openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">הייבוא הסתיים ✓</h2><button data-x>סגירה ✕</button></div>
+      <div class="kpis" style="margin:0 0 14px;grid-template-columns:repeat(3,minmax(0,1fr))"><div class="kpi"><b>${r.added}</b><span>נוספו</span></div><div class="kpi"><b>${r.updated}</b><span>עודכנו</span></div><div class="kpi"><b>${r.skipped}</b><span>דולגו</span></div></div>
+      ${r.errors.length?`<p><b>לא יובאו:</b></p><ul>${r.errors.map(e=>'<li>'+esc(e)+'</li>').join('')}</ul>`:''}
+      <div class="row"><button class="pri big" data-x>סגירה</button></div>`);
+      since=0;pull()}
+    catch(e){go.disabled=false;cnt();$('impMsg').textContent=/unknown function/i.test(String(e.message))?'השרת עוד לא עודכן. יש להדביק את Code.gs ולבצע פריסה בגרסה חדשה.':String(e.message||'הייבוא נכשל')}};
+}
 function member(id){
   const m=id?S.members.find(x=>x.id===id):null;openId=null;
   openD(`<div class="dh"><h2 id="dTitle" tabindex="-1">${m?'עריכת מורשה':'הוספת מורשה'}</h2><button data-x>סגירה ✕</button></div>
@@ -628,14 +680,15 @@ function newTicket(k){
           :'השליחה נכשלה ('+m.slice(0,80)+') — נסו שוב'}
       return;
     }
+    const sb=f.querySelector('button.pri');if(sb.disabled)return;sb.disabled=true;sb.textContent='שומר…';const unlock=()=>{sb.disabled=false;sb.textContent='שליחת הדיווח'};
     const dig=s=>s.replace(/\D/g,'');let c=S.customers.find(c=>dig(c.phone||'')===dig(d.rPhone)&&dig(d.rPhone))||S.customers.find(c=>c.name===d.rName);
     const cid=c?.id||uid();
-    if(!c||c.name!==d.rName||(d.rUnit&&c.company!==d.rUnit))if(!await save('customers',cid,{...(c||{created:now(),email:'',notes:''}),name:d.rName,phone:d.rPhone,company:d.rUnit||c?.company||''}))return;
+    if(!c||c.name!==d.rName||(d.rUnit&&c.company!==d.rUnit))if(!await save('customers',cid,{...(c||{created:now(),email:'',notes:''}),name:d.rName,phone:d.rPhone,company:d.rUnit||c?.company||''}))return unlock();
     const p=+d.priority,t=now(),num=Math.max(1000,...S.tickets.map(x=>+x.num||0))+1,id=uid();
     const eventAt=ev?new Date(`${d.evDate}T${String(SLOT[d.slot]).padStart(2,'0')}:00`).getTime():0;
     if(d.assignee)ls('agent',d.assignee);
     const ok=await save('tickets',id,{num,topic:k,sub,title:d.title||(ev?`${T.n} · ${sub}`:sub),site:loc?d.site:'',bldg:loc?d.bldg:'',location:loc?d.location:'',eventAt,slot:ev?d.slot:'',custId:cid,custName:d.rName,channel:+d.channel,priority:p,status:0,assignee:d.assignee,desc:d.desc,created:t,updated:t,due:ev?eventAt:t+SLA_H[p]*H,closed:0,log:[{at:t,by:d.assignee||d.rName,sys:1,text:'הקריאה נפתחה'}]});
-    if(ok){toast(`קריאה #${num} נפתחה בהצלחה`);ticket(id)}
+    if(ok){toast(`קריאה #${num} נפתחה בהצלחה`);ticket(id)}else unlock();
   };
 }
 
@@ -728,6 +781,8 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('drawer').classList.contains('on'))closeD()});
 $('newC').onclick=()=>person(null);
 $('newM').onclick=()=>member(null);
+$('impM').onclick=memberImport;
+$('tplM').onclick=memberTemplate;
 $('bTp').innerHTML=tOpts('');$('tTp').innerHTML=tOpts('');$('tSt').innerHTML='<option value="">כל הסטטוסים</option>'+opts(ST,-1);
 const fillSub=()=>{const k=$('tTp').value;$('tSb').innerHTML='<option value="">כל תתי־הנושא</option>'+(TK[k]?.s||[]).map(s=>`<option>${esc(s)}</option>`).join('');$('tSb').disabled=!k};
 $('tTp').addEventListener('change',fillSub);fillSub();

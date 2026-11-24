@@ -51,7 +51,7 @@ function doPost(e) {
   var out;
   try {
     var req = JSON.parse(e.postData.contents);
-    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel, apiReport: apiReport, apiLogin: apiLogin, apiMe: apiMe, apiMemberPut: apiMemberPut };
+    var fns = { apiConfig: apiConfig, apiSync: apiSync, apiPut: apiPut, apiDel: apiDel, apiReport: apiReport, apiLogin: apiLogin, apiMe: apiMe, apiMemberPut: apiMemberPut, apiMemberImport: apiMemberImport };
     if (!fns.hasOwnProperty(req.fn)) throw new Error('unknown function');
     out = { ok: true, result: fns[req.fn].apply(null, Array.isArray(req.args) ? req.args : []) };
   } catch (err) {
@@ -190,7 +190,7 @@ function findRow_(sh, col, id) {
 function audit_(action, col, id, actor, d) {
   var labels = { create: 'יצירה', update: 'עדכון', delete: 'מחיקה' };
   ss_().getSheetByName(SHEETS.audit).appendRow([
-    new Date(), labels[action] || action, col === 'tickets' ? 'קריאה' : 'מדווח', Number(d.num) || '', txt_(id), txt_(actor),
+    new Date(), labels[action] || action, col === 'tickets' ? 'קריאה' : col === 'members' ? 'מורשה' : 'מדווח', Number(d.num) || '', txt_(id), txt_(actor),
     txt_(col === 'tickets' && ST[d.status] !== undefined ? ST[d.status] : ''), txt_(JSON.stringify(d).slice(0, 49000)),
   ]);
 }
@@ -481,4 +481,45 @@ function fmtPhone_(p) {
   if (/^0[57]\d{8}$/.test(d)) return d.slice(0, 3) + '-' + d.slice(3);
   if (/^0[2-46-9]\d{7}$/.test(d)) return d.slice(0, 2) + '-' + d.slice(2);
   return String(p || '').trim();
+}
+
+// Staff only: bulk import of authorised reporters from an Excel sheet
+// rows: [{first, last, digits}] · update: true = existing name gets the new 4 digits (and is re-activated)
+function apiMemberImport(token, rows, update, actor) {
+  if (!authOk_(token)) return denied_();
+  if (!Array.isArray(rows) || rows.length > 2000) throw new Error('עד 2000 שורות בכל ייבוא');
+  var who = actor_(actor), res = { added: 0, updated: 0, skipped: 0, errors: [] };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var all = members_(), byName = {}, seen = {};
+    all.forEach(function (m) { byName[normName_(m.data.first) + '|' + normName_(m.data.last)] = m; });
+    var sh = sheet_('members'), add = [], audits = [], now = Date.now();
+    rows.forEach(function (r, i) {
+      var first = String(r && r.first || '').trim().slice(0, 40), last = String(r && r.last || '').trim().slice(0, 40);
+      var digits = String(r && r.digits || '').trim();
+      var line = 'שורה ' + (Number(r && r.line) || i + 2);
+      if (!normName_(first) || !normName_(last)) { res.errors.push(line + ': חסר שם'); return; }
+      if (!/^\d{4}$/.test(digits)) { res.errors.push(line + ' (' + first + ' ' + last + '): צריך בדיוק 4 ספרות'); return; }
+      var key = normName_(first) + '|' + normName_(last);
+      if (seen[key]) { res.errors.push(line + ' (' + first + ' ' + last + '): מופיע פעמיים בקובץ'); return; }
+      seen[key] = 1;
+      var old = byName[key];
+      if (old) {
+        if (!update) { res.skipped++; return; }
+        var d = old.data; d.hash = codeHash_(d.first, d.last, digits); d.active = true;
+        put_('members', old.id, d, who + ' (ייבוא)'); res.updated++;
+        return;
+      }
+      var id = 'm' + now.toString(36) + Math.random().toString(36).slice(2, 7) + i;
+      var rec = { first: first, last: last, unit: '', phone: '', active: true, hash: codeHash_(first, last, digits), created: now, by: who + ' (ייבוא)', lastLogin: 0 };
+      add.push(readable_('members', rec).concat([txt_(id), now, false, txt_(JSON.stringify(rec))]));
+      audits.push([new Date(), 'יצירה', 'מורשה', '', txt_(id), txt_(who + ' (ייבוא)'), '', txt_(JSON.stringify(rec))]);
+      res.added++;
+    });
+    if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, add[0].length).setValues(add);
+    if (audits.length) { var au = ss_().getSheetByName(SHEETS.audit); au.getRange(au.getLastRow() + 1, 1, audits.length, audits[0].length).setValues(audits); }
+    SpreadsheetApp.flush(); bump_();
+  } finally { lock.releaseLock(); }
+  return res;
 }
