@@ -71,8 +71,8 @@ html.pub nav,html.pub .kpis,html.pub #v-board,html.pub #v-tickets,html.pub #v-st
 .done{max-width:640px;margin:30px auto;text-align:center;background:#fff;border:3px solid var(--ok);border-radius:22px;box-shadow:0 8px 0 var(--ok);padding:28px 22px}
 .done .big-num{font-size:clamp(2.6rem,7vw,3.6rem);font-weight:800;color:var(--ok);line-height:1;margin:10px 0}
 .foot{max-width:1240px;margin:0 auto;padding:10px max(4vw,16px) 40px;color:var(--mut);font-size:.9rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.share[hidden]{display:none!important}
-.sheet{position:fixed;inset:auto 0 0 0;z-index:25;display:flex;justify-content:center;padding:0 12px 12px;pointer-events:none}
+.share[hidden],#mlInst[hidden]{display:none!important}
+.sheet{position:fixed;inset:auto 0 0 0;z-index:35;display:flex;justify-content:center;padding:0 12px 12px;pointer-events:none}
 .sheet>div{pointer-events:auto;width:min(520px,100%);background:#fff;border:3px solid #10202a;border-radius:22px;box-shadow:0 8px 0 #10202a,0 20px 50px #0005;padding:18px 18px 14px;animation:up .35s ease-out}
 @keyframes up{from{transform:translateY(120%)}to{transform:none}}
 .sheet .sh{display:flex;gap:14px;align-items:center;margin-bottom:8px}
@@ -236,6 +236,7 @@ sp.addEventListener('click',finish);setTimeout(function(){if(!shown)finish()},25
     </ul></nav>
     <div class="tools">
     <span class="who" id="who" hidden><span id="whoName"></span><button type="button" id="logoutBtn">יציאה</button></span>
+    <button id="instBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3M10 18h4"/></svg><span>הוספה למסך הבית</span></button>
     <button id="shareBtn" class="share" hidden style="display:inline-flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span id="shareLbl">שתף קישור</span></button>
     </div>
   </div>
@@ -398,8 +399,10 @@ function memberLogin(why){
     <label>4 ספרות אחרונות של המספר האישי<input id="mlD" type="password" inputmode="numeric" maxlength="4" autocomplete="off" dir="ltr" style="letter-spacing:.5em;font-size:1.4rem;text-align:center" required></label>
     <p class="late" id="mlE" role="alert">${why==='expired'?'פג תוקף הכניסה, יש להזדהות מחדש':''}</p>
     <button class="pri big" style="width:100%">כניסה</button></div>
-    <p class="foot2">לא ברשימה? פנו לממונה בכיר יותר אצלכם ביחידה.</p></form>`;
+    <p class="foot2">לא ברשימה? פנו לממונה בכיר יותר אצלכם ביחידה.</p>
+    <button type="button" id="mlInst" hidden style="margin:14px auto 0;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 7v7M9 11l3 3 3-3M10 18h4"/></svg><span>הוספה למסך הבית</span></button></form>`;
   document.body.append(d);$('mlF').focus();
+  $('mlInst').onclick=()=>installSheet(true);if(typeof refreshInstallUI==='function')refreshInstallUI();
   $('mlD').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
   d.querySelector('form').onsubmit=async e=>{e.preventDefault();
     const first=$('mlF').value.trim(),last=$('mlL').value.trim(),digits=$('mlD').value;
@@ -820,6 +823,13 @@ function installSheet(force){
   if(bip)$('a2hsGo').onclick=async()=>{bip.prompt();const r=await bip.userChoice.catch(()=>({}));window.__bip=null;close(r.outcome==='accepted'?'installed':'later:'+Date.now())};
   d.addEventListener('keydown',e=>{if(e.key==='Escape')$('a2hsLater').click()});
 }
+/* permanent "add to home screen" button: shown only where the app is not installed yet */
+function canInstall(){return !!window.API_URL&&!standalone()&&(isMobile||!!window.__bip)}
+function refreshInstallUI(){
+  const ok=canInstall();$('instBtn').hidden=!ok;
+  const l=$('mlInst');if(l)l.hidden=!ok;
+}
+window.addEventListener('appinstalled',()=>{ls('k4u_a2hs','installed');window.__bip=null;$('a2hs')?.remove();refreshInstallUI();toast('האפליקציה נוספה למסך הבית ✓')});
 function maybeInstall(){
   if(!window.API_URL||!isMobile||standalone())return;
   const st=ls('k4u_a2hs')||'';
@@ -861,6 +871,8 @@ if(PUB){document.documentElement.classList.add('pub');first=false;$('status').te
   $('rh').textContent='על מה תרצו לדווח?';$('foot').innerHTML='<span>Kesher-4U · מוקד שירות ודיווח תקלות קשר</span><span style="display:flex;gap:18px">'+(isMobile&&!standalone()?'<a href="#" id="a2hsLink">הוספה למסך הבית</a>':'')+'<a href="tech/">כניסת צוות</a></span>';render()}
 else{$('foot').innerHTML='<span>Kesher-4U · ממשק צוות</span>'+(window.API_URL?'<a href="../" target="_blank" rel="noopener">דף הדיווח לציבור ↗</a>':'');pull()}
 maybeInstall();
+$('instBtn').onclick=()=>installSheet(true);refreshInstallUI();
+window.addEventListener('beforeinstallprompt',()=>setTimeout(refreshInstallUI,0));
 $('foot').addEventListener('click',e=>{if(e.target.id==='a2hsLink'){e.preventDefault();installSheet(true)}});
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.__bip=e});
